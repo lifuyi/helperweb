@@ -1,4 +1,4 @@
-import { Stripe } from 'stripe';
+import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-12-18.acacia',
@@ -15,6 +15,11 @@ export interface CreateCheckoutSessionRequest {
 
 export async function createCheckoutSession(data: CreateCheckoutSessionRequest) {
   const { productId, productType, successUrl, cancelUrl, currency = 'usd', promotionCode } = data;
+
+  // Check if Stripe key is configured
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY not configured');
+  }
 
   const productPrices: Record<string, number> = {
     // VPN Plans
@@ -98,6 +103,10 @@ export async function GET(request: Request) {
       return Response.json({ error: 'Missing session_id' }, { status: 400 });
     }
 
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return Response.json({ error: 'STRIPE_SECRET_KEY not configured' }, { status: 500 });
+    }
+
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.url) {
@@ -116,6 +125,10 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return Response.json({ error: 'STRIPE_SECRET_KEY not configured. Please add it in Vercel Environment Variables.' }, { status: 500 });
+    }
+
     const body = await request.json() as CreateCheckoutSessionRequest;
     const { productId, productType = 'one-time', successUrl, cancelUrl, currency = 'usd', promotionCode } = body;
 

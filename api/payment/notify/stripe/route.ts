@@ -1,4 +1,4 @@
-import { Stripe } from 'stripe';
+import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-12-18.acacia',
@@ -73,6 +73,10 @@ export async function handleStripeWebhook(event: PaymentEvent) {
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return Response.json({ error: 'STRIPE_SECRET_KEY not configured' }, { status: 500 });
+    }
+
     const body = await request.text();
     const signature = request.headers.get('stripe-signature');
 
