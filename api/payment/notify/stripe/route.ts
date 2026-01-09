@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-02-24.acacia',
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
@@ -9,30 +9,25 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
 export interface PaymentEvent {
   type: string;
   data: {
-    object: Record<string, unknown>;
+    object: unknown;
   };
 }
 
 export async function handleStripeWebhook(event: PaymentEvent) {
   switch (event.type) {
     case 'checkout.session.completed': {
-      const session = event.data.object as Stripe.Checkout.Session;
+      const session = event.data.object as unknown as Stripe.Checkout.Session;
       const productId = session.metadata?.productId as string;
       const customerEmail = session.customer_details?.email || '';
       const paymentIntentId = session.payment_intent as string;
 
       console.log(`Payment completed for ${productId} by ${customerEmail}`);
       
-      // Here you would typically:
-      // 1. Grant access to the product
-      // 2. Send confirmation email
-      // 3. Update database records
-      
       return { success: true, message: 'Payment processed successfully' };
     }
 
     case 'invoice.payment_succeeded': {
-      const invoice = event.data.object as Stripe.Invoice;
+      const invoice = event.data.object as unknown as Stripe.Invoice;
       const subscriptionId = invoice.subscription as string;
       
       console.log(`Subscription payment succeeded: ${subscriptionId}`);
@@ -41,7 +36,7 @@ export async function handleStripeWebhook(event: PaymentEvent) {
     }
 
     case 'invoice.payment_failed': {
-      const invoice = event.data.object as Stripe.Invoice;
+      const invoice = event.data.object as unknown as Stripe.Invoice;
       const subscriptionId = invoice.subscription as string;
       
       console.log(`Subscription payment failed: ${subscriptionId}`);
@@ -50,7 +45,7 @@ export async function handleStripeWebhook(event: PaymentEvent) {
     }
 
     case 'customer.subscription.updated': {
-      const subscription = event.data.object as Stripe.Subscription;
+      const subscription = event.data.object as unknown as Stripe.Subscription;
       
       console.log(`Subscription updated: ${subscription.id}`);
       
@@ -58,7 +53,7 @@ export async function handleStripeWebhook(event: PaymentEvent) {
     }
 
     case 'customer.subscription.deleted': {
-      const subscription = event.data.object as Stripe.Subscription;
+      const subscription = event.data.object as unknown as Stripe.Subscription;
       
       console.log(`Subscription canceled: ${subscription.id}`);
       
