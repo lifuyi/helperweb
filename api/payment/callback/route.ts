@@ -1,7 +1,7 @@
-import { Stripe } from 'stripe';
+import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
+  apiVersion: '2025-02-24.acacia',
 });
 
 export async function GET(request: Request) {
@@ -13,6 +13,10 @@ export async function GET(request: Request) {
       return Response.redirect('/?payment_error=no_session');
     }
 
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return Response.redirect('/?payment_error=配置错误');
+    }
+
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['payment_intent', 'customer'],
     });
@@ -20,7 +24,6 @@ export async function GET(request: Request) {
     if (session.payment_status === 'paid') {
       const productId = session.metadata?.productId as string;
       
-      // Redirect to success page with product info
       return Response.redirect(`/payment/success?session_id=${sessionId}&product=${productId}`);
     } else if (session.payment_status === 'unpaid') {
       return Response.redirect('/?payment_error=canceled');

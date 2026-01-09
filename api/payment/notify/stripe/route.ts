@@ -19,7 +19,6 @@ export async function handleStripeWebhook(event: PaymentEvent) {
       const session = event.data.object as unknown as Stripe.Checkout.Session;
       const productId = session.metadata?.productId as string;
       const customerEmail = session.customer_details?.email || '';
-      const paymentIntentId = session.payment_intent as string;
 
       console.log(`Payment completed for ${productId} by ${customerEmail}`);
       
@@ -85,7 +84,7 @@ export async function POST(request: Request) {
     let event: PaymentEvent;
 
     try {
-      event = Stripe.Webhooks.constructEvent(body, signature, webhookSecret) as PaymentEvent;
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret) as PaymentEvent;
     } catch (err) {
       console.error('Webhook signature verification failed:', err);
       return Response.json(
