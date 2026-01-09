@@ -1,0 +1,139 @@
+import { Stripe } from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-12-18.acacia',
+});
+
+export interface CreateCheckoutSessionRequest {
+  productId: string;
+  productType: 'one-time' | 'subscription';
+  successUrl: string;
+  cancelUrl: string;
+  currency?: string;
+  promotionCode?: string;
+}
+
+export async function createCheckoutSession(data: CreateCheckoutSessionRequest) {
+  const { productId, productType, successUrl, cancelUrl, currency = 'usd', promotionCode } = data;
+
+  const productPrices: Record<string, number> = {
+    // VPN Plans
+    'vpn-3days': 499,    // $4.99
+    'vpn-7days': 999,    // $9.99
+    'vpn-14days': 1699,  // $16.99
+    'vpn-30days': 2999,  // $29.99
+    // PDF Guide
+    'payment-guide': 999, // $9.99
+  };
+
+  const productNames: Record<string, string> = {
+    'vpn-3days': 'VPN 3-Day Pass',
+    'vpn-7days': 'VPN Weekly Pass',
+    'vpn-14days': 'VPN 14-Day Pass',
+    'vpn-30days': 'VPN Monthly Pass',
+    'payment-guide': 'Payment Guide PDF',
+  };
+
+  const priceInCents = productPrices[productId];
+  const productName = productNames[productId];
+
+  if (!priceInCents) {
+    throw new Error(`Invalid product ID: ${productId}`);
+  }
+
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    mode: productType === 'subscription' ? 'subscription' : 'payment',
+    line_items: [
+      {
+        price_data: {
+          currency: currency,
+          product_data: {
+            name: productName,
+            description: productType === 'subscription' 
+              ? `Access to VPN service for ${productId.replace('vpn-', '').replace('days', ' days')}`
+              : 'Complete payment guide with step-by-step instructions',
+          },
+          unit_amount: priceInCents,
+          recurring: productType === 'subscription' ? {
+            interval: 'day',
+            interval_count: parseInt(productId.replace('vpn-', '').replace('days', '')) || 7,
+          } : undefined,
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    payment_method_types: ['card'],
+    allow_promotion_codes: true,
+    metadata: {
+      productId,
+      productType,
+    },
+  };
+
+  if (promotionCode) {
+    sessionParams.discounts = [{ coupon: promotionCode }];
+  }
+
+  // Support Alipay and WeChat Pay for CNY
+  if (currency === 'cny') {
+    sessionParams.payment_method_types = ['card', 'alipay', 'wechat_pay'];
+  }
+
+  const session = await stripe.checkout.sessions.create(sessionParams);
+
+  return {
+    sessionId: session.id,
+    url: session.url,
+  };
+}
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get('sid');
+
+    if (!sessionId) {
+      return Response.json({ error: 'Missing session_id' }, { status: 400 });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.url) {
+      return Response.redirect(session.url);
+    }
+
+    return Response.json({ error: 'Session has no URL' }, { status: 400 });
+  } catch (error) {
+    console.error('Checkout redirect error:', error);
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Failed to redirect to checkout' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json() as CreateCheckoutSessionRequest;
+    const { productId, productType = 'one-time', successUrl, cancelUrl, currency = 'usd', promotionCode } = body;
+
+    const result = await createCheckoutSession({
+      productId,
+      productType,
+      successUrl,
+      cancelUrl,
+      currency,
+      promotionCode,
+    });
+
+    return Response.json(result);
+  } catch (error) {
+    console.error('Checkout error:', error);
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Failed to create checkout session' },
+      { status: 500 }
+    );
+  }
+}

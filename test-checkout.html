@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Checkout</title>
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 50px; background: #f5f5f5; }
+    .product { background: white; padding: 20px; margin: 10px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; }
+    .product:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    .product h3 { margin: 0 0 10px; }
+    .product p { color: #666; margin: 0; }
+    .price { font-size: 24px; color: #e11d48; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>ChinaConnect - Test Payments</h1>
+  <p>Click a product to start Stripe checkout:</p>
+
+  <div class="product" onclick="buy('vpn-7days')">
+    <h3>VPN Weekly Pass</h3>
+    <p class="price">$9.99</p>
+  </div>
+
+  <div class="product" onclick="buy('vpn-30days')">
+    <h3>VPN Monthly Pass</h3>
+    <p class="price">$29.99</p>
+  </div>
+
+  <div class="product" onclick="buy('payment-guide')">
+    <h3>Payment Guide PDF</h3>
+    <p class="price">$9.99</p>
+  </div>
+
+  <script>
+    const stripe = Stripe('pk_live_51SnAmcHS4OSxvymBQaItQRctstbrAKDSpJDcWrUXU4PEuf5Y6Mmvifsmt8L396aJWsZFKrM3fh9VhXskjRZCLIwn00nrcYdi5n');
+
+    async function buy(productId) {
+      try {
+        const response = await fetch('/api/payment/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            productId,
+            successUrl: window.location.origin + '/payment/success?session_id={CHECKOUT_SESSION_ID}',
+            cancelUrl: window.location.origin,
+          })
+        });
+
+        const data = await response.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else if (data.error) {
+          alert('Error: ' + data.error);
+        }
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+  </script>
+</body>
+</html>

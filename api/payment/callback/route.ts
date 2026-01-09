@@ -1,0 +1,34 @@
+import { Stripe } from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2024-12-18.acacia',
+});
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get('session_id');
+
+    if (!sessionId) {
+      return Response.redirect('/?payment_error=no_session');
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent', 'customer'],
+    });
+
+    if (session.payment_status === 'paid') {
+      const productId = session.metadata?.productId as string;
+      
+      // Redirect to success page with product info
+      return Response.redirect(`/payment/success?session_id=${sessionId}&product=${productId}`);
+    } else if (session.payment_status === 'unpaid') {
+      return Response.redirect('/?payment_error=canceled');
+    } else {
+      return Response.redirect('/?payment_error=pending');
+    }
+  } catch (error) {
+    console.error('Callback error:', error);
+    return Response.redirect('/?payment_error=failed');
+  }
+}
