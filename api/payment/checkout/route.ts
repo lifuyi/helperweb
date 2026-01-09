@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 
+export const runtime = 'edge';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-02-24.acacia',
 });
@@ -16,19 +18,16 @@ export interface CreateCheckoutSessionRequest {
 export async function createCheckoutSession(data: CreateCheckoutSessionRequest) {
   const { productId, productType, successUrl, cancelUrl, currency = 'usd', promotionCode } = data;
 
-  // Check if Stripe key is configured
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY not configured');
   }
 
   const productPrices: Record<string, number> = {
-    // VPN Plans
-    'vpn-3days': 499,    // $4.99
-    'vpn-7days': 999,    // $9.99
-    'vpn-14days': 1699,  // $16.99
-    'vpn-30days': 2999,  // $29.99
-    // PDF Guide
-    'payment-guide': 999, // $9.99
+    'vpn-3days': 499,
+    'vpn-7days': 999,
+    'vpn-14days': 1699,
+    'vpn-30days': 2999,
+    'payment-guide': 999,
   };
 
   const productNames: Record<string, string> = {
@@ -71,27 +70,19 @@ export async function createCheckoutSession(data: CreateCheckoutSessionRequest) 
     cancel_url: cancelUrl,
     payment_method_types: ['card'],
     allow_promotion_codes: true,
-    metadata: {
-      productId,
-      productType,
-    },
+    metadata: { productId, productType },
   };
 
   if (promotionCode) {
     sessionParams.discounts = [{ coupon: promotionCode }];
   }
 
-  // Support Alipay and WeChat Pay for CNY
   if (currency === 'cny') {
     sessionParams.payment_method_types = ['card', 'alipay', 'wechat_pay'];
   }
 
   const session = await stripe.checkout.sessions.create(sessionParams);
-
-  return {
-    sessionId: session.id,
-    url: session.url,
-  };
+  return { sessionId: session.id, url: session.url };
 }
 
 export async function GET(request: Request) {
@@ -108,14 +99,11 @@ export async function GET(request: Request) {
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId);
-
     if (session.url) {
       return Response.redirect(session.url);
     }
-
     return Response.json({ error: 'Session has no URL' }, { status: 400 });
   } catch (error) {
-    console.error('Checkout redirect error:', error);
     return Response.json(
       { error: error instanceof Error ? error.message : 'Failed to redirect to checkout' },
       { status: 500 }
@@ -126,24 +114,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
-      return Response.json({ error: 'STRIPE_SECRET_KEY not configured. Please add it in Vercel Environment Variables.' }, { status: 500 });
+      return Response.json({ error: 'STRIPE_SECRET_KEY not configured' }, { status: 500 });
     }
 
     const body = await request.json() as CreateCheckoutSessionRequest;
-    const { productId, productType = 'one-time', successUrl, cancelUrl, currency = 'usd', promotionCode } = body;
-
-    const result = await createCheckoutSession({
-      productId,
-      productType,
-      successUrl,
-      cancelUrl,
-      currency,
-      promotionCode,
-    });
-
+    const result = await createCheckoutSession(body);
     return Response.json(result);
   } catch (error) {
-    console.error('Checkout error:', error);
     return Response.json(
       { error: error instanceof Error ? error.message : 'Failed to create checkout session' },
       { status: 500 }

@@ -1,5 +1,7 @@
 import Stripe from 'stripe';
 
+export const runtime = 'edge';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-02-24.acacia',
 });
@@ -14,7 +16,7 @@ export async function GET(request: Request) {
     }
 
     if (!process.env.STRIPE_SECRET_KEY) {
-      return Response.redirect('/?payment_error=配置错误');
+      return Response.redirect('/?payment_error=config_error');
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
@@ -23,15 +25,12 @@ export async function GET(request: Request) {
 
     if (session.payment_status === 'paid') {
       const productId = session.metadata?.productId as string;
-      
       return Response.redirect(`/payment/success?session_id=${sessionId}&product=${productId}`);
     } else if (session.payment_status === 'unpaid') {
       return Response.redirect('/?payment_error=canceled');
-    } else {
-      return Response.redirect('/?payment_error=pending');
     }
+    return Response.redirect('/?payment_error=pending');
   } catch (error) {
-    console.error('Callback error:', error);
     return Response.redirect('/?payment_error=failed');
   }
 }
