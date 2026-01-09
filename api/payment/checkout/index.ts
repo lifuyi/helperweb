@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-02-24.acacia',
@@ -114,13 +114,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
-      return Response.json({ error: 'STRIPE_SECRET_KEY not configured' }, { status: 500 });
+      console.error('STRIPE_SECRET_KEY not configured');
+      return Response.json({ error: 'STRIPE_SECRET_KEY not configured in environment' }, { status: 500 });
     }
 
     const body = await request.json() as CreateCheckoutSessionRequest;
     const result = await createCheckoutSession(body);
     return Response.json(result);
   } catch (error) {
+    console.error('Checkout error:', error);
     return Response.json(
       { error: error instanceof Error ? error.message : 'Failed to create checkout session' },
       { status: 500 }

@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-02-24.acacia',
@@ -32,6 +32,7 @@ export async function handleStripeWebhook(event: PaymentEvent) {
 export async function POST(request: Request) {
   try {
     if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY not configured in webhook');
       return Response.json({ error: 'STRIPE_SECRET_KEY not configured' }, { status: 500 });
     }
 
@@ -39,6 +40,7 @@ export async function POST(request: Request) {
     const signature = request.headers.get('stripe-signature');
 
     if (!signature || !webhookSecret) {
+      console.warn('Missing signature or webhook secret');
       return Response.json({ error: 'Missing signature or webhook secret' }, { status: 400 });
     }
 
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
     const result = await handleStripeWebhook(event);
     return Response.json(result);
   } catch (error) {
+    console.error('Webhook processing error:', error);
     return Response.json(
       { error: error instanceof Error ? error.message : 'Webhook processing failed' },
       { status: 500 }

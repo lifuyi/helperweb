@@ -42,8 +42,15 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to create checkout session');
+    try {
+      const error = await response.json();
+      throw new Error(error.error || `API error: ${response.status}`);
+    } catch (e) {
+      if (e instanceof Error && e.message.includes('API error')) {
+        throw e;
+      }
+      throw new Error(`API error ${response.status}: Failed to parse response`);
+    }
   }
 
   return response.json();
@@ -75,8 +82,15 @@ export async function initiateCheckout(params: CreateCheckoutParams): Promise<vo
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to create checkout session');
+    try {
+      const error = await response.json();
+      throw new Error(error.error || `API error: ${response.status}`);
+    } catch (e) {
+      if (e instanceof Error && e.message.includes('API error')) {
+        throw e;
+      }
+      throw new Error(`API error ${response.status}: Failed to parse response`);
+    }
   }
 
   const { sessionId } = await response.json();

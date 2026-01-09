@@ -26,7 +26,7 @@ const productPrices = {
   'payment-guide': { price: 999, name: 'Payment Guide PDF' },
 };
 
-// Checkout API
+// Checkout API - POST to create a new session
 app.post('/api/payment/checkout', async (req, res) => {
   try {
     const { productId, productType = 'one-time', successUrl, cancelUrl, currency = 'usd', promotionCode } = req.body;
@@ -73,6 +73,27 @@ app.post('/api/payment/checkout', async (req, res) => {
   } catch (error) {
     console.error('Checkout error:', error);
     res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to create checkout session' });
+  }
+});
+
+// Checkout API - GET to redirect to Stripe checkout
+app.get('/api/payment/checkout', async (req, res) => {
+  try {
+    const { sid } = req.query;
+
+    if (!sid) {
+      return res.status(400).json({ error: 'Missing session ID (sid parameter)' });
+    }
+
+    const session = await stripe.checkout.sessions.retrieve(sid);
+    if (session.url) {
+      return res.redirect(session.url);
+    } else {
+      return res.status(400).json({ error: 'Session has no checkout URL' });
+    }
+  } catch (error) {
+    console.error('Checkout GET error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to retrieve checkout session' });
   }
 });
 

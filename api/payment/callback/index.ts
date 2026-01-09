@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-02-24.acacia',
@@ -16,6 +16,7 @@ export async function GET(request: Request) {
     }
 
     if (!process.env.STRIPE_SECRET_KEY) {
+      console.error('STRIPE_SECRET_KEY not configured in callback');
       return Response.redirect('/?payment_error=config_error');
     }
 
@@ -31,6 +32,7 @@ export async function GET(request: Request) {
     }
     return Response.redirect('/?payment_error=pending');
   } catch (error) {
+    console.error('Callback error:', error);
     return Response.redirect('/?payment_error=failed');
   }
 }
