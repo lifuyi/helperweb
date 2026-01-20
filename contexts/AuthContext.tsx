@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthUser, onAuthStateChange } from '../services/supabaseService';
+import { saveOrUpdateUser } from '../services/userService';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -31,7 +32,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // 监听认证状态变化
-    const subscription = onAuthStateChange((authUser) => {
+    const subscription = onAuthStateChange(async (authUser) => {
+      if (authUser) {
+        // 用户登录成功，保存或更新用户信息到数据库
+        try {
+          await saveOrUpdateUser(
+            authUser.id,
+            authUser.email || '',
+            authUser.displayName || authUser.email?.split('@')[0] || 'User',
+            authUser.avatarUrl
+          );
+        } catch (error) {
+          console.error('Failed to save user to database:', error);
+          // 不阻止登录，仅记录错误
+        }
+      }
       setUser(authUser);
       setIsLoading(false);
     });
