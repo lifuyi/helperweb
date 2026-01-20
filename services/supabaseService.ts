@@ -31,8 +31,22 @@ export interface AuthError {
  */
 export async function signInWithGoogle(redirectTo?: string): Promise<void> {
   // 确定重定向 URL
-  // 在 Vercel 部署中，确保使用完整的域名
-  const finalRedirectUrl = redirectTo || `${window.location.origin}/auth/callback`;
+  // 使用 window.location.origin 确保在所有环境中都使用正确的域名
+  // 在本地：http://localhost:3000
+  // 在 Vercel：https://your-domain.vercel.app
+  // 在其他部署：使用实际的生产域名
+  
+  let finalRedirectUrl = redirectTo;
+  
+  if (!finalRedirectUrl && typeof window !== 'undefined') {
+    // 确保使用当前页面的完整 origin
+    const origin = window.location.origin;
+    finalRedirectUrl = `${origin}/auth/callback`;
+  }
+  
+  if (!finalRedirectUrl) {
+    finalRedirectUrl = '/auth/callback';
+  }
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
