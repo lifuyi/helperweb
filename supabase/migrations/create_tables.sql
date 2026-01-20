@@ -92,13 +92,19 @@ ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE purchases ENABLE ROW LEVEL SECURITY;
 
 -- users 表策略
+CREATE POLICY "Users can insert their own profile" ON users
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 CREATE POLICY "Users can view their own profile" ON users
-  FOR SELECT USING (auth.uid() = id);
+  FOR SELECT USING (auth.uid() = id OR email IS NOT NULL);
 
 CREATE POLICY "Users can update their own profile" ON users
   FOR UPDATE USING (auth.uid() = id);
 
 -- access_tokens 表策略
+CREATE POLICY "Users can insert their own tokens" ON access_tokens
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
 CREATE POLICY "Users can view their own tokens" ON access_tokens
   FOR SELECT USING (
     user_id = auth.uid() OR 
@@ -106,6 +112,9 @@ CREATE POLICY "Users can view their own tokens" ON access_tokens
   );
 
 -- user_profiles 表策略
+CREATE POLICY "Users can insert their own profile" ON user_profiles
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
 CREATE POLICY "Users can view their own profile" ON user_profiles
   FOR SELECT USING (user_id = auth.uid());
 
@@ -113,6 +122,9 @@ CREATE POLICY "Users can update their own profile" ON user_profiles
   FOR UPDATE USING (user_id = auth.uid());
 
 -- purchases 表策略
+CREATE POLICY "Users can insert their own purchases" ON purchases
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
 CREATE POLICY "Users can view their own purchases" ON purchases
   FOR SELECT USING (user_id = auth.uid());
 
