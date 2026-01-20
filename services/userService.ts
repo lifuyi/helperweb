@@ -54,11 +54,7 @@ export async function saveOrUpdateUser(
 ): Promise<User | null> {
   try {
     // 先检查用户是否已存在
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('*')
-      .eq('google_id', googleId)
-      .single();
+    const existingUser = await getUserByGoogleId(googleId);
 
     if (existingUser) {
       // 更新现有用户
@@ -121,6 +117,25 @@ export async function getUser(userId: string): Promise<User | null> {
 }
 
 /**
+ * 通过 Google ID 获取用户
+ */
+export async function getUserByGoogleId(googleId: string): Promise<User | null> {
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('google_id', googleId)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || null;
+  } catch (error) {
+    console.error('Error getting user by google_id:', error);
+    throw error;
+  }
+}
+
+/**
  * 通过邮箱获取用户
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
@@ -129,7 +144,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
       .from('users')
       .select('*')
       .eq('email', email)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
