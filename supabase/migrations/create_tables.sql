@@ -125,8 +125,8 @@ SELECT
   u.email,
   u.username,
   COUNT(DISTINCT at.id) as total_tokens,
-  COUNT(DISTINCT CASE WHEN at.is_used THEN 1 END) as used_tokens,
-  COUNT(DISTINCT CASE WHEN at.expires_at > CURRENT_TIMESTAMP AND NOT at.is_used THEN 1 END) as active_tokens,
+  COUNT(DISTINCT CASE WHEN at.is_used = TRUE THEN 1 END) as used_tokens,
+  COUNT(DISTINCT CASE WHEN at.expires_at > CURRENT_TIMESTAMP AND at.is_used = FALSE THEN 1 END) as active_tokens,
   MAX(at.created_at) as latest_token_created_at,
   MAX(at.used_at) as latest_token_used_at
 FROM users u
