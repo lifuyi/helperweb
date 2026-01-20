@@ -99,7 +99,7 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_51234567890abcdefghijklmnopqrstuvwxyz
 
 **示例：**
 ```
-STRIPE_SECRET_KEY=sk_test_51234567890abcdefghijklmnopqrstuvwxyz
+STRIPE_SECRET_KEY=sk_test_xxx_your_actual_key_here
 ```
 
 ### 4️⃣ 获取 `STRIPE_WEBHOOK_SECRET`
@@ -112,7 +112,7 @@ STRIPE_SECRET_KEY=sk_test_51234567890abcdefghijklmnopqrstuvwxyz
 
 **示例：**
 ```
-STRIPE_WEBHOOK_SECRET=whsec_1234567890abcdefghijklmnopqrstuvwxyz
+STRIPE_WEBHOOK_SECRET=whsec_xxx_your_actual_key_here
 ```
 
 ---
@@ -173,16 +173,16 @@ npm run dev
 ```env
 # Supabase
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+VITE_SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
 # Stripe
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_key
-STRIPE_SECRET_KEY=sk_test_your_key
-STRIPE_WEBHOOK_SECRET=whsec_your_key
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_your_key_here
+STRIPE_SECRET_KEY=sk_test_your_key_here
+STRIPE_WEBHOOK_SECRET=whsec_your_key_here
 
 # Gemini
-GEMINI_API_KEY=your_gemini_key
+GEMINI_API_KEY=your_gemini_key_here
 ```
 
 ---
