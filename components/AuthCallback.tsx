@@ -5,15 +5,30 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
  * AuthCallback 组件
  * 处理来自服务器端认证的回调
  * 在这里接收并存储 access_token 和 refresh_token
+ * 
+ * 支持两种格式:
+ * 1. Query params: ?access_token=xxx&refresh_token=xxx
+ * 2. URL fragment (hash): #access_token=xxx&refresh_token=xxx
  */
 export const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   useEffect(() => {
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
+    // 尝试从 query params 获取令牌（服务器端认证）
+    let accessToken = searchParams.get('access_token');
+    let refreshToken = searchParams.get('refresh_token');
     const authError = searchParams.get('auth_error');
+
+    // 如果 query params 中没有令牌，尝试从 URL fragment 获取（Supabase OAuth 默认行为）
+    if (!accessToken && !refreshToken) {
+      const hash = window.location.hash.substring(1);
+      if (hash) {
+        const params = new URLSearchParams(hash);
+        accessToken = params.get('access_token');
+        refreshToken = params.get('refresh_token');
+      }
+    }
 
     if (authError) {
       // 如果有错误，显示错误并重定向回首页
@@ -27,6 +42,9 @@ export const AuthCallback: React.FC = () => {
       // 注意：在实际生产环境中，应该使用更安全的方式存储token（如httpOnly cookie）
       localStorage.setItem('supabase_access_token', accessToken);
       localStorage.setItem('supabase_refresh_token', refreshToken);
+
+      // 清除 URL 中的敏感信息
+      window.history.replaceState({}, document.title, window.location.pathname);
 
       // 重定向回首页
       navigate('/');

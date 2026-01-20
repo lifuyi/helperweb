@@ -25,15 +25,19 @@ export interface AuthError {
 
 /**
  * 使用Google登录
- * 适用于客户端认证流程
+ * 支持服务器端认证（推荐）和客户端认证两种方式
  * @param redirectTo 登录后的重定向URL
  * @returns Promise 返回auth session或错误
  */
 export async function signInWithGoogle(redirectTo?: string): Promise<void> {
+  // 确定重定向 URL
+  // 在 Vercel 部署中，确保使用完整的域名
+  const finalRedirectUrl = redirectTo || `${window.location.origin}/auth/callback`;
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: redirectTo || `${window.location.origin}/auth/callback`,
+      redirectTo: finalRedirectUrl,
       queryParams: {
         access_type: 'offline',
         prompt: 'consent',
@@ -91,10 +95,29 @@ export async function getSession() {
 
 /**
  * 监听认证状态变化
+ * 同时检查 localStorage 中存储的令牌（用于页面刷新后恢复登录状态）
  */
 export function onAuthStateChange(
   callback: (user: AuthUser | null) => void
 ) {
+  // 首先检查 localStorage 中是否有存储的令牌
+  // 这用于在页面刷新后恢复登录状态
+  const storedAccessToken = localStorage.getItem('supabase_access_token');
+  const storedRefreshToken = localStorage.getItem('supabase_refresh_token');
+
+  if (storedAccessToken && storedRefreshToken) {
+    // 如果有存储的令牌，尝试恢复会话
+    supabase.auth.setSession({
+      access_token: storedAccessToken,
+      refresh_token: storedRefreshToken,
+    }).catch((error) => {
+      console.error('Failed to restore session from localStorage:', error);
+      // 如果恢复失败，清除存储的令牌
+      localStorage.removeItem('supabase_access_token');
+      localStorage.removeItem('supabase_refresh_token');
+    });
+  }
+
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange(async (event, session) => {
