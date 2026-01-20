@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { SectionId } from '../types';
 import { Menu, X } from 'lucide-react';
+import { GoogleLoginButton } from './GoogleLoginButton';
 
 interface NavbarProps {
   onNavigate: (page: 'home' | 'vpn', sectionId?: string) => void;
@@ -43,7 +44,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
         </div>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center space-x-8">
+        <div className="hidden md:flex items-center space-x-6">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -55,14 +56,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
               {item.label}
             </button>
           ))}
-          <button 
-            onClick={() => handleNavClick(SectionId.VPN)}
-            className={`px-5 py-2 rounded-full font-semibold transition-transform hover:scale-105 ${
-              isScrolled || currentPage !== 'home' ? 'bg-chinaRed text-white' : 'bg-white text-chinaRed'
-            }`}
-          >
-            Get Connected
-          </button>
+          <div className="flex items-center space-x-4">
+            <GoogleLoginButton 
+              variant={isScrolled || currentPage !== 'home' ? 'default' : 'outline'}
+              size="sm"
+              showUserInfo={false}
+            />
+            <button 
+              onClick={() => handleNavClick(SectionId.VPN)}
+              className={`px-5 py-2 rounded-full font-semibold transition-transform hover:scale-105 ${
+                isScrolled || currentPage !== 'home' ? 'bg-chinaRed text-white' : 'bg-white text-chinaRed'
+              }`}
+            >
+              Get Connected
+            </button>
+          </div>
         </div>
 
         {/* Mobile Toggle */}
@@ -89,6 +97,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
               {item.label}
             </button>
           ))}
+          <div className="pt-4 border-t border-slate-100">
+            <GoogleLoginButton 
+              variant="default"
+              size="md"
+              showUserInfo={true}
+            />
+          </div>
         </div>
       )}
     </nav>

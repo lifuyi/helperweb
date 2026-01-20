@@ -45,3 +45,11 @@ export interface PaymentEvent {
   productId?: string;
   error?: string;
 }
+
+export interface AuthUser {
+  id: string;
+  email?: string;
+  displayName?: string;
+  avatarUrl?: string;
+  provider?: string;
+}

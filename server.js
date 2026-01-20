@@ -4,6 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
+import { createClient } from '@supabase/supabase-js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -12,6 +13,19 @@ const app = express();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2024-12-18.acacia',
 });
+
+// 初始化 Supabase 服务器端客户端
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const supabaseAdmin = supabaseUrl && supabaseServiceRoleKey
+  ? createClient(supabaseUrl, supabaseServiceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+  : null;
 
 app.use(cors());
 app.use(express.json());
@@ -137,6 +151,44 @@ app.get('/api/payment/callback', (req, res) => {
   res.redirect('/payment/success?session_id=' + session_id);
 });
 
+// Auth Callback API - 处理Supabase OAuth回调
+app.get('/auth/callback', async (req, res) => {
+  try {
+    const { code, error, error_description } = req.query;
+
+    if (error) {
+      const errorMessage = error_description || error;
+      return res.redirect(`/?auth_error=${encodeURIComponent(errorMessage)}`);
+    }
+
+    if (!code) {
+      return res.redirect('/?auth_error=No authorization code received');
+    }
+
+    // 使用授权码交换会话
+    if (!supabaseAdmin) {
+      return res.redirect('/?auth_error=Supabase not configured');
+    }
+
+    const { data, error: exchangeError } = await supabaseAdmin.auth.exchangeCodeForSession(code);
+
+    if (exchangeError || !data.session) {
+      return res.redirect(`/?auth_error=${encodeURIComponent(exchangeError?.message || 'Failed to exchange code for session')}`);
+    }
+
+    // 设置认证cookie或者重定向回前端
+    // 注意：这里假设前端会通过localStorage或其他方式存储token
+    const redirectUrl = new URL('/', req.headers.origin || 'http://localhost:3000');
+    redirectUrl.searchParams.append('access_token', data.session.access_token);
+    redirectUrl.searchParams.append('refresh_token', data.session.refresh_token);
+
+    return res.redirect(redirectUrl.toString());
+  } catch (error) {
+    console.error('Auth callback error:', error);
+    res.redirect(`/?auth_error=${encodeURIComponent(error instanceof Error ? error.message : 'Unknown error')}`);
+  }
+});
+
 // Serve static files from chinaconnect dist
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
@@ -158,4 +210,5 @@ app.listen(PORT, () => {
   console.log('  POST /api/payment/checkout');
   console.log('  POST /api/payment/notify/stripe');
   console.log('  GET  /api/payment/callback');
+  console.log('  GET  /auth/callback (Supabase OAuth)');
 });
