@@ -119,7 +119,8 @@ CREATE POLICY "Users can view their own purchases" ON purchases
 -- ============================================================================
 -- 视图: user_access_summary (用户访问总结)
 -- ============================================================================
-CREATE VIEW IF NOT EXISTS user_access_summary AS
+DROP VIEW IF EXISTS user_access_summary CASCADE;
+CREATE VIEW user_access_summary AS
 SELECT 
   u.id,
   u.email,
