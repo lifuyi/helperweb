@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:api": "node build-api.mjs",
+    "vercel-build": "npm run build:api && vite build",
     "preview": "vite preview",
     "server": "node server.js",
     "start": "npm run build && node server.js"
