@@ -45,16 +45,17 @@ export interface UserProfile {
 /**
  * 保存或更新用户信息
  * 在用户首次 Google 登录时调用
+ * @param userId - Supabase Auth user ID (not Google ID)
  */
 export async function saveOrUpdateUser(
-  googleId: string,
+  userId: string,
   email: string,
   username: string,
   avatarUrl?: string
 ): Promise<User | null> {
   try {
     // 先检查用户是否已存在
-    const existingUser = await getUserByGoogleId(googleId);
+    const existingUser = await getUser(userId);
 
     if (existingUser) {
       // 更新现有用户
@@ -65,7 +66,7 @@ export async function saveOrUpdateUser(
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', existingUser.id)
+        .eq('id', userId)
         .select()
         .single();
 
@@ -77,7 +78,7 @@ export async function saveOrUpdateUser(
     const { data, error } = await supabase
       .from('users')
       .insert({
-        google_id: googleId,
+        id: userId,
         email,
         username,
         avatar_url: avatarUrl,
