@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 import { execSync } from 'child_process';
-import { copyFileSync, mkdirSync, existsSync, readdirSync, statSync } from 'fs';
+import { mkdirSync, existsSync, readdirSync } from 'fs';
 import { join, relative } from 'path';
+import { build } from 'esbuild';
 
 const apiSrc = 'api';
 const apiDest = '.vercel/functions';
@@ -15,8 +16,8 @@ function cleanDir(dir) {
   mkdirSync(dir, { recursive: true });
 }
 
-// Copy file with .ts -> .js transformation
-function copyAndCompile(srcFile) {
+// Compile TypeScript to JavaScript using esbuild
+async function compileTsFile(srcFile) {
   const relPath = relative(apiSrc, srcFile);
   const destPath = join(apiDest, relPath).replace('.ts', '.js');
   
@@ -24,8 +25,19 @@ function copyAndCompile(srcFile) {
   const destDir = destPath.substring(0, destPath.lastIndexOf('/'));
   mkdirSync(destDir, { recursive: true });
   
-  // Copy the file as .js
-  copyFileSync(srcFile, destPath);
+  // Use esbuild to compile the TypeScript file to JavaScript
+  await build({
+    entryPoints: [srcFile],
+    outfile: destPath,
+    bundle: true,
+    platform: 'node',
+    target: 'node18',
+    format: 'esm',
+    external: ['stripe'], // Don't bundle stripe, let Vercel handle it
+    minify: false,
+    sourcemap: false,
+  });
+  
   console.log(`Compiled: ${relPath} -> ${relPath.replace('.ts', '.js')}`);
 }
 
@@ -46,12 +58,19 @@ function findTsFiles(dir) {
 }
 
 // Main build script
-console.log('Building API routes...');
-cleanDir(apiDest);
+async function main() {
+  console.log('Building API routes...');
+  cleanDir(apiDest);
 
-const tsFiles = findTsFiles(apiSrc);
-for (const file of tsFiles) {
-  copyAndCompile(file);
+  const tsFiles = findTsFiles(apiSrc);
+  for (const file of tsFiles) {
+    await compileTsFile(file);
+  }
+
+  console.log(`Built ${tsFiles.length} API routes`);
 }
 
-console.log(`Built ${tsFiles.length} API routes`);
+main().catch(err => {
+  console.error('Build failed:', err);
+  process.exit(1);
+});
