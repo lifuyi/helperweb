@@ -12,10 +12,20 @@ import { VpnPage } from './components/VpnPage';
 import { UserCenter } from './components/UserCenter';
 import { SectionId } from './types';
 
-function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'vpn' | 'guide' | 'user-center'>('home');
+interface AppProps {
+  initialPage?: 'home' | 'vpn' | 'guide' | 'user-center';
+  onNavigateHome?: () => void;
+}
+
+function App({ initialPage = 'home', onNavigateHome }: AppProps) {
+  const [currentPage, setCurrentPage] = useState<'home' | 'vpn' | 'guide' | 'user-center'>(initialPage);
 
   const handleNavigate = (page: 'home' | 'vpn' | 'user-center', sectionId?: string) => {
+    if (page === 'home' && onNavigateHome) {
+      onNavigateHome();
+      return;
+    }
+    
     setCurrentPage(page);
     
     if (page === 'home' && sectionId) {
