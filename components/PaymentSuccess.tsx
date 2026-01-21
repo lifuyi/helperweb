@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle, Download, Mail, ArrowLeft } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 export const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -67,7 +67,17 @@ export const PaymentSuccess: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            <button className="w-full bg-chinaRed hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
+            <a
+              href="/user-center"
+              className="block w-full bg-chinaRed hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center text-center"
+            >
+              <svg className="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              View My Orders & VPN URLs
+            </a>
+
+            <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
               <Mail className="mr-2 w-4 h-4" />
               Check Email for Details
             </button>

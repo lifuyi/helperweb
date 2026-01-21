@@ -4,8 +4,8 @@ import { Menu, X } from 'lucide-react';
 import { GoogleLoginButton } from './GoogleLoginButton';
 
 interface NavbarProps {
-  onNavigate: (page: 'home' | 'vpn', sectionId?: string) => void;
-  currentPage: 'home' | 'vpn' | 'guide';
+  onNavigate: (page: 'home' | 'vpn' | 'user-center', sectionId?: string) => void;
+  currentPage: 'home' | 'vpn' | 'guide' | 'user-center';
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
@@ -63,6 +63,16 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
               showUserInfo={false}
             />
             <button 
+              onClick={() => onNavigate('user-center')}
+              className={`px-4 py-2 rounded-full font-semibold transition-colors ${
+                isScrolled || currentPage !== 'home' 
+                  ? 'bg-slate-100 text-slate-900 hover:bg-slate-200' 
+                  : 'bg-white/20 text-white hover:bg-white/30'
+              }`}
+            >
+              My Orders
+            </button>
+            <button 
               onClick={() => handleNavClick(SectionId.VPN)}
               className={`px-5 py-2 rounded-full font-semibold transition-transform hover:scale-105 ${
                 isScrolled || currentPage !== 'home' ? 'bg-chinaRed text-white' : 'bg-white text-chinaRed'
@@ -97,6 +107,15 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
               {item.label}
             </button>
           ))}
+          <button 
+            onClick={() => {
+              onNavigate('user-center');
+              setIsMobileMenuOpen(false);
+            }}
+            className="text-left text-slate-700 font-medium py-2 border-b border-slate-100"
+          >
+            My Orders
+          </button>
           <div className="pt-4 border-t border-slate-100">
             <GoogleLoginButton 
               variant="default"

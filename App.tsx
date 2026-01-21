@@ -9,12 +9,13 @@ import { Assistant } from './components/Assistant';
 import { FlashCards } from './components/FlashCards';
 import { PaymentGuide } from './components/PaymentGuide';
 import { VpnPage } from './components/VpnPage';
+import { UserCenter } from './components/UserCenter';
 import { SectionId } from './types';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'vpn' | 'guide'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'vpn' | 'guide' | 'user-center'>('home');
 
-  const handleNavigate = (page: 'home' | 'vpn', sectionId?: string) => {
+  const handleNavigate = (page: 'home' | 'vpn' | 'user-center', sectionId?: string) => {
     setCurrentPage(page);
     
     if (page === 'home' && sectionId) {
@@ -38,6 +39,8 @@ function App() {
         return <VpnPage onBack={() => handleNavigate('home')} />;
       case 'guide':
         return <PaymentGuide onBack={() => handleNavigate('home')} />;
+      case 'user-center':
+        return <UserCenter onBack={() => handleNavigate('home')} />;
       case 'home':
       default:
         return (

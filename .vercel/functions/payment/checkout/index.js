@@ -2,7 +2,7 @@
 import Stripe from "stripe";
 var runtime = "nodejs";
 var stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-12-18.acacia"
+  apiVersion: "2023-10-16"
 });
 async function createCheckoutSession(data) {
   const { productId, productType, successUrl, cancelUrl, currency = "usd", promotionCode } = data;
