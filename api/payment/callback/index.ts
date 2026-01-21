@@ -73,7 +73,12 @@ async function handlePaymentSuccess(
       .single();
 
     if (purchaseError) {
-      console.error('Error saving purchase:', purchaseError);
+      console.error('Error saving purchase - detailed:', {
+        message: purchaseError.message,
+        code: purchaseError.code,
+        details: purchaseError.details,
+        hint: purchaseError.hint,
+      });
       throw purchaseError;
     }
 
@@ -99,7 +104,12 @@ async function handlePaymentSuccess(
       .single();
 
     if (tokenError) {
-      console.error('Error creating access token:', tokenError);
+      console.error('Error creating access token - detailed:', {
+        message: tokenError.message,
+        code: tokenError.code,
+        details: tokenError.details,
+        hint: tokenError.hint,
+      });
       throw tokenError;
     }
 
