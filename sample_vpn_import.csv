@@ -1,0 +1,11 @@
+url,day_period,traffic_limit
+vpn1.example.com,30,1073741824
+vpn2.example.com,30,1073741824
+vpn3.example.com,7,536870912
+vpn4.example.com,14,1610612736
+vpn5.example.com,30,2147483648
+vpn6.example.com,3,268435456
+vpn7.example.com,90,5368709120
+vpn8.example.com,60,3221225472
+vpn9.example.com,15,805306368
+vpn10.example.com,7,536870912

@@ -10,17 +10,18 @@ import { FlashCards } from './components/FlashCards';
 import { PaymentGuide } from './components/PaymentGuide';
 import { VpnPage } from './components/VpnPage';
 import { UserCenter } from './components/UserCenter';
+import { AdminDashboard } from './components/AdminDashboard';
 import { SectionId } from './types';
 
 interface AppProps {
-  initialPage?: 'home' | 'vpn' | 'guide' | 'user-center';
+  initialPage?: 'home' | 'vpn' | 'guide' | 'user-center' | 'admin';
   onNavigateHome?: () => void;
 }
 
 function App({ initialPage = 'home', onNavigateHome }: AppProps) {
-  const [currentPage, setCurrentPage] = useState<'home' | 'vpn' | 'guide' | 'user-center'>(initialPage);
+  const [currentPage, setCurrentPage] = useState<'home' | 'vpn' | 'guide' | 'user-center' | 'admin'>(initialPage);
 
-  const handleNavigate = (page: 'home' | 'vpn' | 'user-center', sectionId?: string) => {
+  const handleNavigate = (page: 'home' | 'vpn' | 'user-center' | 'admin', sectionId?: string) => {
     if (page === 'home' && onNavigateHome) {
       onNavigateHome();
       return;
@@ -55,6 +56,9 @@ function App({ initialPage = 'home', onNavigateHome }: AppProps) {
       case 'user-center':
         console.log('Rendering UserCenter');
         return <UserCenter onBack={() => handleNavigate('home')} />;
+      case 'admin':
+        console.log('Rendering AdminDashboard');
+        return <AdminDashboard onBack={() => handleNavigate('home')} />;
       case 'home':
       default:
         console.log('Rendering Home');

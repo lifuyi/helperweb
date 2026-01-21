@@ -6,8 +6,17 @@ import { useAuth } from '../contexts/AuthContext';
 import { signOut } from '../services/supabaseService';
 
 interface NavbarProps {
-  onNavigate: (page: 'home' | 'vpn' | 'user-center', sectionId?: string) => void;
-  currentPage: 'home' | 'vpn' | 'guide' | 'user-center';
+  onNavigate: (page: 'home' | 'vpn' | 'user-center' | 'admin', sectionId?: string) => void;
+  currentPage: 'home' | 'vpn' | 'guide' | 'user-center' | 'admin';
+}
+
+/**
+ * Check if user is admin
+ */
+function isAdminUser(email?: string): boolean {
+  if (!email) return false;
+  const adminEmails = import.meta.env.VITE_ADMIN_EMAILS?.split(',') || [];
+  return adminEmails.some((adminEmail) => adminEmail.trim().toLowerCase() === email.toLowerCase());
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
@@ -118,7 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavigate, currentPage }) => {
 
 interface UserDropdownProps {
   isScrolled: boolean;
-  onNavigate: (page: 'home' | 'vpn' | 'user-center', sectionId?: string) => void;
+  onNavigate: (page: 'home' | 'vpn' | 'user-center' | 'admin', sectionId?: string) => void;
 }
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ isScrolled, onNavigate }) => {
@@ -217,6 +226,20 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ isScrolled, onNavigate }) =
               </svg>
               My Account
             </button>
+            {isAdminUser(user?.email) && (
+              <button
+                onClick={() => {
+                  onNavigate('admin');
+                  setIsOpen(false);
+                }}
+                className="w-full px-4 py-3 text-left text-slate-700 hover:bg-slate-50 border-b border-slate-100 flex items-center"
+              >
+                <svg className="w-5 h-5 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                Admin Dashboard
+              </button>
+            )}
             <button
               onClick={handleSignOut}
               className="w-full px-4 py-3 text-left text-slate-700 hover:bg-slate-50 flex items-center"
