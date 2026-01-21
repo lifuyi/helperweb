@@ -73,6 +73,11 @@ export async function signOut(): Promise<void> {
   if (error) {
     throw new Error(error.message);
   }
+
+  // 清除存储的令牌，确保彻底退出登录
+  // 这样可以防止在快速重新登录时出现会话冲突
+  localStorage.removeItem('supabase_access_token');
+  localStorage.removeItem('supabase_refresh_token');
 }
 
 /**
