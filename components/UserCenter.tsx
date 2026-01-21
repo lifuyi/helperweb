@@ -23,7 +23,9 @@ export const UserCenter: React.FC<UserCenterProps> = ({ onBack }) => {
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('UserCenter mounted. Authenticated:', isAuthenticated, 'User:', user);
     if (!isAuthenticated || !user) {
+      console.log('Not authenticated, showing login message');
       setError('Please log in to view your orders');
       setIsLoading(false);
       return;
@@ -33,12 +35,17 @@ export const UserCenter: React.FC<UserCenterProps> = ({ onBack }) => {
   }, [user, isAuthenticated]);
 
   const loadOrders = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user, skipping loadOrders');
+      return;
+    }
 
     try {
       setIsLoading(true);
       setError(null);
+      console.log('Loading orders for user:', user.id);
       const userOrders = await getUserOrders(user.id);
+      console.log('Orders loaded:', userOrders);
       setOrders(userOrders);
     } catch (err) {
       console.error('Error loading orders:', err);

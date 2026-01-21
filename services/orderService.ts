@@ -16,6 +16,7 @@ export interface OrderDetails extends Purchase {
  */
 export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
   try {
+    console.log('getUserOrders called with userId:', userId);
     // Fetch purchases
     const { data: purchases, error: purchaseError } = await supabase
       .from('purchases')
@@ -23,9 +24,14 @@ export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
-    if (purchaseError) throw purchaseError;
+    if (purchaseError) {
+      console.error('Purchase fetch error:', purchaseError);
+      throw purchaseError;
+    }
 
+    console.log('Purchases fetched:', purchases);
     if (!purchases || purchases.length === 0) {
+      console.log('No purchases found for user');
       return [];
     }
 

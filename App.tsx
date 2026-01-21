@@ -34,15 +34,20 @@ function App() {
   };
 
   const renderContent = () => {
+    console.log('renderContent called with currentPage:', currentPage);
     switch (currentPage) {
       case 'vpn':
+        console.log('Rendering VpnPage');
         return <VpnPage onBack={() => handleNavigate('home')} />;
       case 'guide':
+        console.log('Rendering PaymentGuide');
         return <PaymentGuide onBack={() => handleNavigate('home')} />;
       case 'user-center':
+        console.log('Rendering UserCenter');
         return <UserCenter onBack={() => handleNavigate('home')} />;
       case 'home':
       default:
+        console.log('Rendering Home');
         return (
           <>
             <Hero onNavigate={handleNavigate} />
@@ -59,7 +64,7 @@ function App() {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <Navbar onNavigate={handleNavigate} currentPage={currentPage} />
       {renderContent()}
-      <Footer />
+      {currentPage !== 'user-center' && <Footer />}
       <Assistant />
     </div>
   );
