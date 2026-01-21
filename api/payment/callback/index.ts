@@ -37,6 +37,49 @@ function getSupabaseClient() {
 }
 
 /**
+ * Ensure user exists in the users table
+ * This is needed because sometimes the user might not be saved yet due to race conditions
+ */
+async function ensureUserExists(userId: string, supabase: any): Promise<boolean> {
+  try {
+    // Check if user already exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (existingUser) {
+      console.log('User already exists:', userId);
+      return true;
+    }
+
+    // If user doesn't exist, create a placeholder user
+    console.log('User does not exist, creating placeholder user:', userId);
+    const { error: insertError } = await supabase
+      .from('users')
+      .insert({
+        id: userId,
+        email: `user-${userId}@placeholder.local`,
+        username: `User-${userId.slice(0, 8)}`,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('Error creating placeholder user:', insertError);
+      return false;
+    }
+
+    console.log('Placeholder user created successfully');
+    return true;
+  } catch (error) {
+    console.error('Error in ensureUserExists:', error);
+    return false;
+  }
+}
+
+/**
  * Helper function to create access tokens and purchase record
  */
 async function handlePaymentSuccess(
@@ -56,6 +99,13 @@ async function handlePaymentSuccess(
     });
 
     const supabase = getSupabaseClient();
+
+    // 0. Ensure user exists
+    console.log('Ensuring user exists...');
+    const userExists = await ensureUserExists(userId, supabase);
+    if (!userExists) {
+      throw new Error('Failed to ensure user exists in database');
+    }
 
     // 1. Save purchase record
     console.log('Saving purchase record...');
