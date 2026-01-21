@@ -16,6 +16,7 @@ interface NavbarProps {
 function isAdminUser(email?: string): boolean {
   if (!email) return false;
   const adminEmails = import.meta.env.VITE_ADMIN_EMAILS?.split(',') || [];
+  console.log('Admin check:', { email, adminEmails, isAdmin: adminEmails.some((adminEmail) => adminEmail.trim().toLowerCase() === email.toLowerCase()) });
   return adminEmails.some((adminEmail) => adminEmail.trim().toLowerCase() === email.toLowerCase());
 }
 
