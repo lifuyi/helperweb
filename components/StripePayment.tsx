@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CreditCard, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { initiateCheckout, ProductInfo } from '../services/stripeService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface StripePaymentProps {
   product: ProductInfo;
@@ -15,6 +16,7 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
   onError,
   onCancel,
 }) => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [promotionCode, setPromotionCode] = useState('');
@@ -24,14 +26,27 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
     setError(null);
 
     try {
+      if (!user) {
+        throw new Error('You must be logged in to make a purchase');
+      }
+
+      console.log('Starting checkout with user:', {
+        userId: user.id,
+        userEmail: user.email,
+        productId: product.id,
+        productType: product.type,
+      });
+
       await initiateCheckout({
         productId: product.id,
         productType: product.type,
         promotionCode: promotionCode || undefined,
+        userId: user.id,
       });
       onSuccess?.('redirecting');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Payment initialization failed';
+      console.error('Checkout error:', errorMessage);
       setError(errorMessage);
       onError?.(errorMessage);
     } finally {

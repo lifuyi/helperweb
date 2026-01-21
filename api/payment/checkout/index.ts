@@ -13,10 +13,11 @@ export interface CreateCheckoutSessionRequest {
   cancelUrl: string;
   currency?: string;
   promotionCode?: string;
+  userId?: string;
 }
 
 export async function createCheckoutSession(data: CreateCheckoutSessionRequest) {
-  const { productId, productType, successUrl, cancelUrl, currency = 'usd', promotionCode } = data;
+  const { productId, productType, successUrl, cancelUrl, currency = 'usd', promotionCode, userId } = data;
 
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY not configured');
@@ -70,7 +71,7 @@ export async function createCheckoutSession(data: CreateCheckoutSessionRequest) 
     cancel_url: cancelUrl,
     payment_method_types: ['card'],
     allow_promotion_codes: true,
-    metadata: { productId, productType },
+    metadata: { productId, productType, ...(userId && { userId }) },
   };
 
   if (promotionCode) {
@@ -119,7 +120,21 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json() as CreateCheckoutSessionRequest;
+    console.log('Checkout request received:', {
+      productId: body.productId,
+      productType: body.productType,
+      userId: body.userId,
+      hasPromotionCode: !!body.promotionCode,
+      currency: body.currency,
+    });
+    
     const result = await createCheckoutSession(body);
+    
+    console.log('Checkout session created:', {
+      sessionId: result.sessionId,
+      hasUrl: !!result.url,
+    });
+    
     return Response.json(result);
   } catch (error) {
     console.error('Checkout error:', error);

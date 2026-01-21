@@ -16,14 +16,16 @@ export interface CreateCheckoutParams {
   productType?: 'one-time' | 'subscription';
   promotionCode?: string;
   currency?: string;
+  userId?: string;
 }
 
 const API_BASE = '/api/payment';
 
 export async function createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
-  const { productId, productType = 'one-time', promotionCode, currency = 'usd' } = params;
+  const { productId, productType = 'one-time', promotionCode, currency = 'usd', userId } = params;
 
-  const successUrl = `${window.location.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}&product=${productId}`;
+  // First redirect to callback to save purchase, then to success page
+  const successUrl = `${window.location.origin}/api/payment/callback?session_id={CHECKOUT_SESSION_ID}&product=${productId}`;
   const cancelUrl = `${window.location.origin}/?payment_canceled=true`;
 
   const response = await fetch(`${API_BASE}/checkout`, {
@@ -38,6 +40,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       cancelUrl,
       currency,
       promotionCode,
+      userId,
     }),
   });
 
@@ -61,9 +64,10 @@ export function redirectToCheckout(sessionId: string): void {
 }
 
 export async function initiateCheckout(params: CreateCheckoutParams): Promise<void> {
-  const { productId, productType = 'one-time', promotionCode, currency = 'usd' } = params;
+  const { productId, productType = 'one-time', promotionCode, currency = 'usd', userId } = params;
 
-  const successUrl = `${window.location.origin}/payment/success?session_id={CHECKOUT_SESSION_ID}&product=${productId}`;
+  // First redirect to callback to save purchase, then to success page
+  const successUrl = `${window.location.origin}/api/payment/callback?session_id={CHECKOUT_SESSION_ID}&product=${productId}`;
   const cancelUrl = `${window.location.origin}/?payment_canceled=true`;
 
   const response = await fetch(`${API_BASE}/checkout`, {
@@ -78,6 +82,7 @@ export async function initiateCheckout(params: CreateCheckoutParams): Promise<vo
       cancelUrl,
       currency,
       promotionCode,
+      userId,
     }),
   });
 
