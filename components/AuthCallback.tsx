@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { logger } from '../utils/logger';
+import { sessionManager } from '../utils/sessionManager';
 
 /**
  * AuthCallback 组件
@@ -39,16 +40,19 @@ export const AuthCallback: React.FC = () => {
     }
 
     if (accessToken && refreshToken) {
-      // 存储token到localStorage
-      // 注意：在实际生产环境中，应该使用更安全的方式存储token（如httpOnly cookie）
-      localStorage.setItem('supabase_access_token', accessToken);
-      localStorage.setItem('supabase_refresh_token', refreshToken);
+      try {
+        // 使用 session manager 保存 token - 更安全的方式
+        sessionManager.saveSession(accessToken, refreshToken);
 
-      // 清除 URL 中的敏感信息
-      window.history.replaceState({}, document.title, window.location.pathname);
+        // 清除 URL 中的敏感信息
+        window.history.replaceState({}, document.title, window.location.pathname);
 
-      // 重定向回首页
-      navigate('/');
+        // 重定向回首页
+        navigate('/');
+      } catch (error) {
+        logger.error('Failed to save session:', error);
+        navigate('/?auth_error=failed_to_save_session');
+      }
     } else {
       // 如果没有token，重定向回首页
       navigate('/');

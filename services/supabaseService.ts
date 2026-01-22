@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { logger } from '../utils/logger';
+import { sessionManager } from '../utils/sessionManager';
 
 // 客户端初始化 - 用于浏览器端
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -75,10 +76,8 @@ export async function signOut(): Promise<void> {
     throw new Error(error.message);
   }
 
-  // 清除存储的令牌，确保彻底退出登录
-  // 这样可以防止在快速重新登录时出现会话冲突
-  localStorage.removeItem('supabase_access_token');
-  localStorage.removeItem('supabase_refresh_token');
+  // 使用 session manager 清除会话
+  sessionManager.clearSession();
 }
 
 /**
@@ -115,26 +114,23 @@ export async function getSession() {
 
 /**
  * 监听认证状态变化
- * 同时检查 localStorage 中存储的令牌（用于页面刷新后恢复登录状态）
+ * 同时检查存储的令牌（用于页面刷新后恢复登录状态）
  */
 export function onAuthStateChange(
   callback: (user: AuthUser | null) => void
 ) {
-  // 首先检查 localStorage 中是否有存储的令牌
-  // 这用于在页面刷新后恢复登录状态
-  const storedAccessToken = localStorage.getItem('supabase_access_token');
-  const storedRefreshToken = localStorage.getItem('supabase_refresh_token');
+  // 首先尝试恢复存储的会话
+  const session = sessionManager.getSession();
 
-  if (storedAccessToken && storedRefreshToken) {
+  if (session?.accessToken && session?.refreshToken) {
     // 如果有存储的令牌，尝试恢复会话
     supabase.auth.setSession({
-      access_token: storedAccessToken,
-      refresh_token: storedRefreshToken,
+      access_token: session.accessToken,
+      refresh_token: session.refreshToken,
     }).catch((error) => {
-      logger.error('Failed to restore session from localStorage:', error);
-      // 如果恢复失败，清除存储的令牌
-      localStorage.removeItem('supabase_access_token');
-      localStorage.removeItem('supabase_refresh_token');
+      logger.error('Failed to restore session:', error);
+      // 如果恢复失败，清除存储的会话
+      sessionManager.clearSession();
     });
   }
 
@@ -142,6 +138,9 @@ export function onAuthStateChange(
     data: { subscription },
   } = supabase.auth.onAuthStateChange(async (event, session) => {
     if (session?.user) {
+      // 会话有更新，刷新 session 过期时间
+      sessionManager.refreshSessionExpiration();
+
       const user: AuthUser = {
         id: session.user.id,
         email: session.user.email,
