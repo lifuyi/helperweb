@@ -6,8 +6,43 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import { PRODUCTS, getProductDescription } from './config/products.ts';
 
 dotenv.config({ path: '.env.local' });
+
+/**
+ * Validate that all required environment variables are set
+ */
+function validateEnvironmentVariables() {
+  const required = ['STRIPE_SECRET_KEY', 'VITE_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}
+
+/**
+ * Validate that a URL is safe (relative or same-origin)
+ */
+function isValidRedirectUrl(url) {
+  if (!url) return false;
+  
+  // Allow relative URLs
+  if (url.startsWith('/')) return true;
+  
+  try {
+    const urlObj = new URL(url);
+    // Only allow safe protocols
+    if (!['http:', 'https:'].includes(urlObj.protocol)) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Validate environment on startup
+validateEnvironmentVariables();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,23 +69,25 @@ app.use(cors());
 app.use(express.json());
 app.use(express.text({ type: 'application/json' }));
 
-// Product configuration
-const productPrices = {
-  'vpn-3days': { price: 499, name: 'VPN 3-Day Pass' },
-  'vpn-7days': { price: 999, name: 'VPN Weekly Pass' },
-  'vpn-14days': { price: 1699, name: 'VPN 14-Day Pass' },
-  'vpn-30days': { price: 2999, name: 'VPN Monthly Pass' },
-  'payment-guide': { price: 999, name: 'Payment Guide PDF' },
-};
+// Product configuration is now centralized in config/products.ts
+// Use PRODUCTS constant imported above
 
 // Checkout API - POST to create a new session
 app.post('/api/payment/checkout', async (req, res) => {
   try {
     const { productId, productType = 'one-time', successUrl, cancelUrl, currency = 'usd', promotionCode } = req.body;
     
-    const product = productPrices[productId];
+    const product = PRODUCTS[productId];
     if (!product) {
-      return res.status(400).json({ error: 'Invalid product ID: ' + productId });
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+
+    // SECURITY: Validate redirect URLs
+    if (!isValidRedirectUrl(successUrl)) {
+      return res.status(400).json({ error: 'Invalid success URL' });
+    }
+    if (!isValidRedirectUrl(cancelUrl)) {
+      return res.status(400).json({ error: 'Invalid cancel URL' });
     }
 
     const sessionParams = {
@@ -61,9 +98,7 @@ app.post('/api/payment/checkout', async (req, res) => {
             currency: currency,
             product_data: {
               name: product.name,
-              description: productId.startsWith('vpn') 
-                ? 'Access to VPN service for ' + productId.replace('vpn-', '').replace('days', ' days') + ' days'
-                : 'Complete payment guide with step-by-step instructions',
+              description: product.description,
             },
             unit_amount: product.price,
           },
@@ -120,11 +155,18 @@ app.post('/api/payment/notify/stripe', async (req, res) => {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   try {
+    // SECURITY: Always require signature verification for webhooks
+    if (!sig || !webhookSecret) {
+      console.warn('Webhook signature verification failed: missing signature or secret');
+      return res.status(400).json({ error: 'Missing webhook credentials' });
+    }
+
     let event;
-    if (sig && webhookSecret) {
+    try {
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    } else {
-      event = req.body;
+    } catch (err) {
+      console.warn('Webhook signature verification failed:', err instanceof Error ? err.message : err);
+      return res.status(400).json({ error: 'Webhook signature verification failed' });
     }
 
     console.log('Webhook event:', event.type);
@@ -144,14 +186,25 @@ app.post('/api/payment/notify/stripe', async (req, res) => {
     res.json({ received: true });
   } catch (error) {
     console.error('Webhook error:', error);
-    res.status(400).json({ error: 'Webhook error' });
+    res.status(400).json({ error: 'Webhook processing error' });
   }
 });
 
 // Callback API
 app.get('/api/payment/callback', (req, res) => {
-  const { session_id } = req.query;
-  res.redirect('/payment/success?session_id=' + session_id);
+  try {
+    const { session_id } = req.query;
+    
+    // SECURITY: Validate session_id format (Stripe session IDs are prefixed with cs_)
+    if (!session_id || typeof session_id !== 'string' || !session_id.match(/^cs_[a-z0-9]+$/i)) {
+      return res.status(400).json({ error: 'Invalid session ID format' });
+    }
+    
+    res.redirect('/payment/success?session_id=' + encodeURIComponent(session_id));
+  } catch (error) {
+    console.error('Payment callback error:', error);
+    res.status(400).json({ error: 'Callback processing error' });
+  }
 });
 
 // Auth Callback API - 处理Supabase OAuth回调

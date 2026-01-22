@@ -1,6 +1,7 @@
 import { supabase } from './supabaseService';
 import { createAccessToken, generateAccessUrl, User } from './userService';
 import { logger } from '../utils/logger';
+import { getExpiryDaysForProduct, getProductName, getProductDescription } from '../config/products';
 
 /**
  * 购买记录接口
@@ -188,20 +189,7 @@ export async function updatePurchaseStatus(
   }
 }
 
-/**
- * 根据产品 ID 获取过期天数
- */
-function getExpiryDaysForProduct(productId: string): number {
-  const expiryMap: Record<string, number> = {
-    'vpn-3days': 3,
-    'vpn-7days': 7,
-    'vpn-14days': 14,
-    'vpn-30days': 30,
-    'payment-guide': 365, // 1年
-  };
-
-  return expiryMap[productId] || 30; // 默认30天
-}
+// getExpiryDaysForProduct is now imported from config/products.ts
 
 /**
  * 生成发送给用户的邮件内容
@@ -297,32 +285,6 @@ ${accessUrl}
   return { subject, html, text };
 }
 
-/**
- * 获取产品名称
- */
-function getProductName(productId: string): string {
-  const productNames: Record<string, string> = {
-    'payment-guide': '支付指南 PDF',
-    'vpn-3days': 'VPN 3天访问权限',
-    'vpn-7days': 'VPN 7天访问权限',
-    'vpn-14days': 'VPN 14天访问权限',
-    'vpn-30days': 'VPN 30天访问权限',
-  };
-
-  return productNames[productId] || productId;
-}
-
-/**
- * 获取产品价格
- */
-export function getProductPrice(productId: string): number {
-  const priceMap: Record<string, number> = {
-    'vpn-3days': 4.99,
-    'vpn-7days': 9.99,
-    'vpn-14days': 16.99,
-    'vpn-30days': 29.99,
-    'payment-guide': 9.99,
-  };
-
-  return priceMap[productId] || 0;
-}
+// getProductName is now imported from config/products.ts
+// Note: getProductPrice in config/products.ts returns price in cents for Stripe API
+// For display purposes, divide by 100 to get dollars
