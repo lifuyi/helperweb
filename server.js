@@ -196,8 +196,14 @@ app.get('/auth/callback', async (req, res) => {
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
-// Serve index.html for all other routes (SPA fallback) - use RegExp instead of *
-app.get(/.*/, (req, res) => {
+// Serve index.html for all other routes (SPA fallback)
+// Only serve index.html for routes that don't have a file extension (to avoid overriding static assets)
+app.get('*', (req, res) => {
+  // Don't serve index.html for requests with file extensions (static assets should be handled by express.static)
+  if (path.extname(req.path)) {
+    return res.status(404).send('Not found');
+  }
+  
   const indexPath = path.join(distPath, 'index.html');
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
