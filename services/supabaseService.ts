@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '../utils/logger';
 
 // 客户端初始化 - 用于浏览器端
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -130,7 +131,7 @@ export function onAuthStateChange(
       access_token: storedAccessToken,
       refresh_token: storedRefreshToken,
     }).catch((error) => {
-      console.error('Failed to restore session from localStorage:', error);
+      logger.error('Failed to restore session from localStorage:', error);
       // 如果恢复失败，清除存储的令牌
       localStorage.removeItem('supabase_access_token');
       localStorage.removeItem('supabase_refresh_token');

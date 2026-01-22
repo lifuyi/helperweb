@@ -1,6 +1,7 @@
 import { supabase } from './supabaseService';
 import { Purchase } from './paymentService';
 import { AccessToken } from './userService';
+import { logger } from '../utils/logger';
 
 /**
  * Order details interface combining purchase and access token info
@@ -16,7 +17,7 @@ export interface OrderDetails extends Purchase {
  */
 export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
   try {
-    console.log('getUserOrders called with userId:', userId);
+    logger.log('getUserOrders called with userId:', userId);
     // Fetch purchases
     const { data: purchases, error: purchaseError } = await supabase
       .from('purchases')
@@ -25,13 +26,13 @@ export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
       .order('created_at', { ascending: false });
 
     if (purchaseError) {
-      console.error('Purchase fetch error:', purchaseError);
+      logger.error('Purchase fetch error:', purchaseError);
       throw purchaseError;
     }
 
-    console.log('Purchases fetched:', purchases);
+    logger.log('Purchases fetched:', purchases);
     if (!purchases || purchases.length === 0) {
-      console.log('No purchases found for user');
+      logger.log('No purchases found for user');
       return [];
     }
 
@@ -46,7 +47,7 @@ export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
           .order('created_at', { ascending: false });
 
         if (tokenError) {
-          console.error('Error fetching tokens for purchase:', tokenError);
+          logger.error('Error fetching tokens for purchase:', tokenError);
           return {
             ...purchase,
             access_tokens: [],
@@ -66,7 +67,7 @@ export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
 
     return ordersWithTokens;
   } catch (error) {
-    console.error('Error getting user orders:', error);
+    logger.error('Error getting user orders:', error);
     throw error;
   }
 }
@@ -98,7 +99,7 @@ export async function getOrderDetails(
       .order('created_at', { ascending: false });
 
     if (tokenError) {
-      console.error('Error fetching tokens:', tokenError);
+      logger.error('Error fetching tokens:', tokenError);
     }
 
     return {
@@ -108,7 +109,7 @@ export async function getOrderDetails(
       status_display: getStatusDisplay(purchase.status),
     };
   } catch (error) {
-    console.error('Error getting order details:', error);
+    logger.error('Error getting order details:', error);
     throw error;
   }
 }

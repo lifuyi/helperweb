@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger } from '../utils/logger';
 import {
   Upload,
   AlertCircle,
@@ -69,7 +70,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
       setVpnUrls(results);
       setTotalVpnUrls(count);
     } catch (error) {
-      console.error('Error loading inventory:', error);
+      logger.error('Error loading inventory:', error);
     } finally {
       setIsLoadingInventory(false);
     }
@@ -144,7 +145,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
         setPreviewData(data);
         setImportResult(null);
       } catch (error) {
-        console.error('CSV parse error:', error);
+        logger.error('CSV parse error:', error);
         alert(`Error parsing CSV: ${(error as Error).message}`);
         setPreviewData([]);
       }
@@ -174,7 +175,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
         onSuccess?.();
       }
     } catch (error) {
-      console.error('Import error:', error);
+      logger.error('Import error:', error);
       setImportResult({
         success: false,
         successCount: 0,
@@ -194,7 +195,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
       setVpnUrls(vpnUrls.filter((u) => u.id !== vpnUrlId));
       setTotalVpnUrls(Math.max(0, totalVpnUrls - 1));
     } catch (error) {
-      console.error('Error deleting VPN URL:', error);
+      logger.error('Error deleting VPN URL:', error);
       alert('Failed to delete VPN URL');
     }
   };
@@ -205,7 +206,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
       const updated = vpnUrls.map((u) => (u.id === vpnUrlId ? { ...u, status: newStatus } : u));
       setVpnUrls(updated);
     } catch (error) {
-      console.error('Error updating status:', error);
+      logger.error('Error updating status:', error);
       alert('Failed to update status');
     }
   };
@@ -218,7 +219,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
         setVpnUrls(results);
         setTotalVpnUrls(results.length);
       } catch (error) {
-        console.error('Error searching:', error);
+        logger.error('Error searching:', error);
       }
     } else {
       setInventoryPage(1);

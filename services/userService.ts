@@ -1,5 +1,6 @@
 import { supabase } from './supabaseService';
 import crypto from 'crypto';
+import { logger } from '../utils/logger';
 
 /**
  * 用户接口定义
@@ -93,7 +94,7 @@ export async function saveOrUpdateUser(
 
     return data;
   } catch (error) {
-    console.error('Error saving user:', error);
+    logger.error('Error saving user:', error);
     throw error;
   }
 }
@@ -112,7 +113,7 @@ export async function getUser(userId: string): Promise<User | null> {
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   } catch (error) {
-    console.error('Error getting user:', error);
+    logger.error('Error getting user:', error);
     throw error;
   }
 }
@@ -131,7 +132,7 @@ export async function getUserByGoogleId(googleId: string): Promise<User | null> 
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   } catch (error) {
-    console.error('Error getting user by google_id:', error);
+    logger.error('Error getting user by google_id:', error);
     throw error;
   }
 }
@@ -150,7 +151,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   } catch (error) {
-    console.error('Error getting user by email:', error);
+    logger.error('Error getting user by email:', error);
     throw error;
   }
 }
@@ -173,7 +174,7 @@ async function createUserProfile(userId: string): Promise<UserProfile | null> {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error creating user profile:', error);
+    logger.error('Error creating user profile:', error);
     throw error;
   }
 }
@@ -217,7 +218,7 @@ export async function createAccessToken(
 
     return data;
   } catch (error) {
-    console.error('Error creating access token:', error);
+    logger.error('Error creating access token:', error);
     throw error;
   }
 }
@@ -246,7 +247,7 @@ export async function verifyAccessToken(token: string): Promise<AccessToken | nu
 
     return data;
   } catch (error) {
-    console.error('Error verifying token:', error);
+    logger.error('Error verifying token:', error);
     throw error;
   }
 }
@@ -266,7 +267,7 @@ export async function markTokenAsUsed(token: string): Promise<void> {
 
     if (error) throw error;
   } catch (error) {
-    console.error('Error marking token as used:', error);
+    logger.error('Error marking token as used:', error);
     throw error;
   }
 }
@@ -285,7 +286,7 @@ export async function getUserTokens(userId: string): Promise<AccessToken[]> {
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error('Error getting user tokens:', error);
+    logger.error('Error getting user tokens:', error);
     throw error;
   }
 }
@@ -305,7 +306,7 @@ export async function getUserByToken(token: string): Promise<User | null> {
 
     return await getUser(tokenData.user_id);
   } catch (error) {
-    console.error('Error getting user by token:', error);
+    logger.error('Error getting user by token:', error);
     throw error;
   }
 }
@@ -332,7 +333,7 @@ async function updateUserProfile(userId: string, productId: string): Promise<voi
       })
       .eq('user_id', userId);
   } catch (error) {
-    console.error('Error updating user profile:', error);
+    logger.error('Error updating user profile:', error);
   }
 }
 
@@ -350,7 +351,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   } catch (error) {
-    console.error('Error getting user profile:', error);
+    logger.error('Error getting user profile:', error);
     throw error;
   }
 }

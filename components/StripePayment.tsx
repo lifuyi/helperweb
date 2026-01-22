@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CreditCard, Lock, Loader2, AlertCircle } from 'lucide-react';
 import { initiateCheckout, ProductInfo } from '../services/stripeService';
 import { useAuth } from '../contexts/AuthContext';
+import { logger } from '../utils/logger';
 
 interface StripePaymentProps {
   product: ProductInfo;
@@ -30,7 +31,7 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
         throw new Error('You must be logged in to make a purchase');
       }
 
-      console.log('Starting checkout with user:', {
+      logger.log('Starting checkout with user:', {
         userId: user.id,
         userEmail: user.email,
         productId: product.id,
@@ -46,7 +47,7 @@ export const StripePayment: React.FC<StripePaymentProps> = ({
       onSuccess?.('redirecting');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Payment initialization failed';
-      console.error('Checkout error:', errorMessage);
+      logger.error('Checkout error:', errorMessage);
       setError(errorMessage);
       onError?.(errorMessage);
     } finally {
@@ -154,10 +155,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           product={product}
           onCancel={onClose}
           onSuccess={(sessionId) => {
-            console.log('Checkout session created:', sessionId);
+            logger.log('Checkout session created:', sessionId);
           }}
           onError={(error) => {
-            console.error('Payment error:', error);
+            logger.error('Payment error:', error);
           }}
         />
       </div>

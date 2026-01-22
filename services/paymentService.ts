@@ -1,5 +1,6 @@
 import { supabase } from './supabaseService';
 import { createAccessToken, generateAccessUrl, User } from './userService';
+import { logger } from '../utils/logger';
 
 /**
  * 购买记录接口
@@ -64,7 +65,7 @@ export async function handlePaymentSuccess(
       accessUrl,
     };
   } catch (error) {
-    console.error('Error handling payment success:', error);
+    logger.error('Error handling payment success:', error);
     throw error;
   }
 }
@@ -97,7 +98,7 @@ export async function savePurchase(
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error saving purchase:', error);
+    logger.error('Error saving purchase:', error);
     throw error;
   }
 }
@@ -116,7 +117,7 @@ export async function getPurchase(purchaseId: string): Promise<Purchase | null> 
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   } catch (error) {
-    console.error('Error getting purchase:', error);
+    logger.error('Error getting purchase:', error);
     throw error;
   }
 }
@@ -135,7 +136,7 @@ export async function getUserPurchases(userId: string): Promise<Purchase[]> {
     if (error) throw error;
     return data || [];
   } catch (error) {
-    console.error('Error getting user purchases:', error);
+    logger.error('Error getting user purchases:', error);
     throw error;
   }
 }
@@ -156,7 +157,7 @@ export async function getPurchaseByStripeSession(
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   } catch (error) {
-    console.error('Error getting purchase by stripe session:', error);
+    logger.error('Error getting purchase by stripe session:', error);
     throw error;
   }
 }
@@ -182,7 +183,7 @@ export async function updatePurchaseStatus(
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error updating purchase status:', error);
+    logger.error('Error updating purchase status:', error);
     throw error;
   }
 }

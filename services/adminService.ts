@@ -1,5 +1,6 @@
 import { supabase } from './supabaseService';
 import { Purchase } from './paymentService';
+import { logger } from '../utils/logger';
 
 /**
  * VPN URL Interface
@@ -71,7 +72,7 @@ export async function getAllPurchases(
           .single();
 
         if (userError) {
-          console.error('Error fetching user:', userError);
+          logger.error('Error fetching user:', userError);
           return {
             ...purchase,
             user_email: 'Unknown',
@@ -89,7 +90,7 @@ export async function getAllPurchases(
 
     return purchasesWithUsers;
   } catch (error) {
-    console.error('Error getting all purchases:', error);
+    logger.error('Error getting all purchases:', error);
     throw error;
   }
 }
@@ -106,7 +107,7 @@ export async function getPurchaseCount(): Promise<number> {
     if (error) throw error;
     return count || 0;
   } catch (error) {
-    console.error('Error getting purchase count:', error);
+    logger.error('Error getting purchase count:', error);
     throw error;
   }
 }
@@ -126,7 +127,7 @@ export async function getTotalRevenue(): Promise<number> {
     const total = (data || []).reduce((sum, purchase) => sum + purchase.amount, 0);
     return total;
   } catch (error) {
-    console.error('Error getting total revenue:', error);
+    logger.error('Error getting total revenue:', error);
     throw error;
   }
 }
@@ -154,7 +155,7 @@ export async function addVpnUrl(
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error adding VPN URL:', error);
+    logger.error('Error adding VPN URL:', error);
     throw error;
   }
 }
@@ -187,7 +188,7 @@ export async function bulkImportVpnUrls(
         .select();
 
       if (error) {
-        console.error('Batch import error:', error);
+        logger.error('Batch import error:', error);
         // Continue with next batch, but record error
         const errorMsg = error.message || 'Unknown error during batch import';
         errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${errorMsg}`);
@@ -202,7 +203,7 @@ export async function bulkImportVpnUrls(
       errors,
     };
   } catch (error) {
-    console.error('Error bulk importing VPN URLs:', error);
+    logger.error('Error bulk importing VPN URLs:', error);
     throw error;
   }
 }
@@ -240,7 +241,7 @@ export async function getAllVpnUrls(
             .single();
 
           if (userError) {
-            console.error('Error fetching user:', userError);
+            logger.error('Error fetching user:', userError);
             return {
               ...vpnUrl,
               user_email: 'Unknown',
@@ -261,7 +262,7 @@ export async function getAllVpnUrls(
 
     return vpnUrlsWithUsers;
   } catch (error) {
-    console.error('Error getting all VPN URLs:', error);
+    logger.error('Error getting all VPN URLs:', error);
     throw error;
   }
 }
@@ -282,7 +283,7 @@ export async function getVpnUrlCount(status?: 'active' | 'inactive' | 'used'): P
     if (error) throw error;
     return count || 0;
   } catch (error) {
-    console.error('Error getting VPN URL count:', error);
+    logger.error('Error getting VPN URL count:', error);
     throw error;
   }
 }
@@ -308,7 +309,7 @@ export async function updateVpnUrlStatus(
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error updating VPN URL status:', error);
+    logger.error('Error updating VPN URL status:', error);
     throw error;
   }
 }
@@ -322,7 +323,7 @@ export async function deleteVpnUrl(vpnUrlId: string): Promise<void> {
 
     if (error) throw error;
   } catch (error) {
-    console.error('Error deleting VPN URL:', error);
+    logger.error('Error deleting VPN URL:', error);
     throw error;
   }
 }
@@ -350,7 +351,7 @@ export async function assignVpnUrlToUser(
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error assigning VPN URL to user:', error);
+    logger.error('Error assigning VPN URL to user:', error);
     throw error;
   }
 }
@@ -375,7 +376,7 @@ export async function unassignVpnUrl(vpnUrlId: string): Promise<VpnUrl | null> {
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error unassigning VPN URL:', error);
+    logger.error('Error unassigning VPN URL:', error);
     throw error;
   }
 }
@@ -410,7 +411,7 @@ export async function getAdminStats(): Promise<AdminStats> {
       inactiveVpnUrls,
     };
   } catch (error) {
-    console.error('Error getting admin stats:', error);
+    logger.error('Error getting admin stats:', error);
     throw error;
   }
 }
@@ -453,7 +454,7 @@ export async function searchPurchases(query: string): Promise<PurchaseWithUser[]
 
     return purchasesWithUsers;
   } catch (error) {
-    console.error('Error searching purchases:', error);
+    logger.error('Error searching purchases:', error);
     throw error;
   }
 }
@@ -503,7 +504,7 @@ export async function searchVpnUrls(query: string): Promise<VpnUrlWithUser[]> {
 
     return vpnUrlsWithUsers;
   } catch (error) {
-    console.error('Error searching VPN URLs:', error);
+    logger.error('Error searching VPN URLs:', error);
     throw error;
   }
 }

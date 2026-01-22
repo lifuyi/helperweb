@@ -4,6 +4,7 @@ import { Menu, X } from 'lucide-react';
 import { GoogleLoginButton } from './GoogleLoginButton';
 import { useAuth } from '../contexts/AuthContext';
 import { signOut } from '../services/supabaseService';
+import { logger } from '../utils/logger';
 
 interface NavbarProps {
   onNavigate: (page: 'home' | 'vpn' | 'user-center' | 'admin', sectionId?: string) => void;
@@ -16,7 +17,7 @@ interface NavbarProps {
 function isAdminUser(email?: string): boolean {
   if (!email) return false;
   const adminEmails = import.meta.env.VITE_ADMIN_EMAILS?.split(',') || [];
-  console.log('Admin check:', { email, adminEmails, isAdmin: adminEmails.some((adminEmail) => adminEmail.trim().toLowerCase() === email.toLowerCase()) });
+  logger.log('Admin check:', { email, adminEmails, isAdmin: adminEmails.some((adminEmail) => adminEmail.trim().toLowerCase() === email.toLowerCase()) });
   return adminEmails.some((adminEmail) => adminEmail.trim().toLowerCase() === email.toLowerCase());
 }
 
@@ -144,7 +145,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ isScrolled, onNavigate }) =
       await signOut();
       setIsOpen(false);
     } catch (err) {
-      console.error('Sign out error:', err);
+      logger.error('Sign out error:', err);
     }
   };
 

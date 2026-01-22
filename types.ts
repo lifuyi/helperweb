@@ -22,7 +22,7 @@ export interface ChatMessage {
 export interface FaqItem {
   question: string;
   answer: string;
-  icon?: any;
+  icon?: React.ReactNode;
 }
 
 export enum SectionId {
@@ -46,10 +46,6 @@ export interface PaymentEvent {
   error?: string;
 }
 
-export interface AuthUser {
-  id: string;
-  email?: string;
-  displayName?: string;
-  avatarUrl?: string;
-  provider?: string;
-}
+// AuthUser is defined in supabaseService.ts - exported from there
+// This re-export ensures consistency across the application
+export type { AuthUser } from './services/supabaseService';

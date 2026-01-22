@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getAdminStats, AdminStats } from '../services/adminService';
 import { PurchaseManagement } from './PurchaseManagement';
 import { VpnImport } from './VpnImport';
+import { logger } from '../utils/logger';
 
 interface AdminDashboardProps {
   onBack: () => void;
@@ -36,7 +37,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
       const adminStats = await getAdminStats();
       setStats(adminStats);
     } catch (err) {
-      console.error('Error loading admin stats:', err);
+      logger.error('Error loading admin stats:', err);
       setError('Failed to load dashboard statistics. Please try again later.');
     } finally {
       setIsLoading(false);

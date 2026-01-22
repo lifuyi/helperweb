@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { logger } from '../utils/logger';
 
 const apiKey = process.env.API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
@@ -28,7 +29,7 @@ export const generateChatResponse = async (userMessage: string): Promise<string>
 
     return response.text || "I'm sorry, I couldn't generate a response at the moment.";
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    logger.error("Gemini API Error:", error);
     return "I'm having trouble connecting to the server right now. Please try again later.";
   }
 };

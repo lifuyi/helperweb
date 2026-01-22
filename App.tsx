@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { Stats } from './components/Stats';
@@ -12,6 +12,7 @@ import { VpnPage } from './components/VpnPage';
 import { UserCenter } from './components/UserCenter';
 import { AdminDashboard } from './components/AdminDashboard';
 import { SectionId } from './types';
+import { logger } from './utils/logger';
 
 interface AppProps {
   initialPage?: 'home' | 'vpn' | 'guide' | 'user-center' | 'admin';
@@ -45,23 +46,23 @@ function App({ initialPage = 'home', onNavigateHome }: AppProps) {
   };
 
   const renderContent = () => {
-    console.log('renderContent called with currentPage:', currentPage);
+    logger.log('renderContent called with currentPage:', currentPage);
     switch (currentPage) {
       case 'vpn':
-        console.log('Rendering VpnPage');
+        logger.log('Rendering VpnPage');
         return <VpnPage onBack={() => handleNavigate('home')} />;
       case 'guide':
-        console.log('Rendering PaymentGuide');
+        logger.log('Rendering PaymentGuide');
         return <PaymentGuide onBack={() => handleNavigate('home')} />;
       case 'user-center':
-        console.log('Rendering UserCenter');
+        logger.log('Rendering UserCenter');
         return <UserCenter onBack={() => handleNavigate('home')} />;
       case 'admin':
-        console.log('Rendering AdminDashboard');
+        logger.log('Rendering AdminDashboard');
         return <AdminDashboard onBack={() => handleNavigate('home')} />;
       case 'home':
       default:
-        console.log('Rendering Home');
+        logger.log('Rendering Home');
         return (
           <>
             <Hero onNavigate={handleNavigate} />

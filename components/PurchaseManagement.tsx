@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronUp, Download, Loader, AlertCircle } from 'lucide-react';
+import { logger } from '../utils/logger';
 import {
   getAllPurchases,
   getPurchaseCount,
@@ -46,7 +47,7 @@ export const PurchaseManagement: React.FC = () => {
         setTotalCount(count);
       }
     } catch (err) {
-      console.error('Error loading purchases:', err);
+      logger.error('Error loading purchases:', err);
       setError('Failed to load purchases. Please try again later.');
     } finally {
       setIsLoading(false);

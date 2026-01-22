@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { signInWithGoogle, signOut } from '../services/supabaseService';
 import { useAuth } from '../contexts/AuthContext';
 import { LogOut } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface GoogleLoginButtonProps {
   className?: string;
@@ -27,7 +28,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to sign in with Google';
       setError(errorMessage);
-      console.error('Google login error:', err);
+      logger.error('Google login error:', err);
     }
   };
 
@@ -39,7 +40,7 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to sign out';
       setError(errorMessage);
-      console.error('Sign out error:', err);
+      logger.error('Sign out error:', err);
     } finally {
       setIsSigningOut(false);
     }

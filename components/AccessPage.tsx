@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { verifyAccessToken, getUserByToken, User, AccessToken } from '../services/userService';
+import { logger } from '../utils/logger';
 
 export const AccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -46,7 +47,7 @@ export const AccessPage: React.FC = () => {
         setDownloadUrl(url);
 
       } catch (err) {
-        console.error('Error verifying token:', err);
+        logger.error('Error verifying token:', err);
         setError('An error occurred while processing your request');
       } finally {
         setIsLoading(false);

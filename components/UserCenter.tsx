@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Copy, Check, AlertCircle, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { logger } from '../utils/logger';
 import {
   getUserOrders,
   OrderDetails,
@@ -23,9 +24,9 @@ export const UserCenter: React.FC<UserCenterProps> = ({ onBack }) => {
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('UserCenter mounted. Authenticated:', isAuthenticated, 'User:', user);
+    logger.log('UserCenter mounted. Authenticated:', isAuthenticated, 'User:', user);
     if (!isAuthenticated || !user) {
-      console.log('Not authenticated, showing login message');
+      logger.log('Not authenticated, showing login message');
       setError('Please log in to view your orders');
       setIsLoading(false);
       return;
@@ -36,19 +37,19 @@ export const UserCenter: React.FC<UserCenterProps> = ({ onBack }) => {
 
   const loadOrders = async () => {
     if (!user) {
-      console.log('No user, skipping loadOrders');
+      logger.log('No user, skipping loadOrders');
       return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
-      console.log('Loading orders for user:', user.id);
+      logger.log('Loading orders for user:', user.id);
       const userOrders = await getUserOrders(user.id);
-      console.log('Orders loaded:', userOrders);
+      logger.log('Orders loaded:', userOrders);
       setOrders(userOrders);
     } catch (err) {
-      console.error('Error loading orders:', err);
+      logger.error('Error loading orders:', err);
       setError('Failed to load your orders. Please try again later.');
     } finally {
       setIsLoading(false);

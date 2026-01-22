@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { logger } from '../utils/logger';
 
 /**
  * AuthCallback 组件
@@ -32,7 +33,7 @@ export const AuthCallback: React.FC = () => {
 
     if (authError) {
       // 如果有错误，显示错误并重定向回首页
-      console.error('Auth error:', authError);
+      logger.error('Auth error:', authError);
       navigate('/?auth_error=' + encodeURIComponent(authError));
       return;
     }

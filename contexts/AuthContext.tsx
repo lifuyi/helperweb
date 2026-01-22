@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthUser, onAuthStateChange } from '../services/supabaseService';
 import { saveOrUpdateUser } from '../services/userService';
+import { logger } from '../utils/logger';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -43,7 +44,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             authUser.avatarUrl
           );
         } catch (error) {
-          console.error('Failed to save user to database:', error);
+          logger.error('Failed to save user to database:', error);
           // 不阻止登录，仅记录错误
         }
       }
