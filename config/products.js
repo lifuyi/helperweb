@@ -3,14 +3,7 @@
  * Ensures consistency across server and client
  */
 
-export interface ProductConfig {
-  price: number;
-  name: string;
-  description: string;
-  expiryDays: number;
-}
-
-export const PRODUCTS: Record<string, ProductConfig> = {
+export const PRODUCTS = {
   'vpn-3days': {
     price: 499, // in cents for Stripe
     name: 'VPN 3-Day Pass',
@@ -46,41 +39,41 @@ export const PRODUCTS: Record<string, ProductConfig> = {
 /**
  * Get product configuration by ID
  */
-export function getProduct(productId: string): ProductConfig | null {
+export function getProduct(productId) {
   return PRODUCTS[productId] || null;
 }
 
 /**
  * Get expiry days for a product
  */
-export function getExpiryDaysForProduct(productId: string): number {
+export function getExpiryDaysForProduct(productId) {
   return PRODUCTS[productId]?.expiryDays || 30;
 }
 
 /**
  * Get product name
  */
-export function getProductName(productId: string): string {
+export function getProductName(productId) {
   return PRODUCTS[productId]?.name || productId;
 }
 
 /**
  * Get product price in cents (for Stripe)
  */
-export function getProductPrice(productId: string): number {
+export function getProductPrice(productId) {
   return PRODUCTS[productId]?.price || 0;
 }
 
 /**
  * Get product description
  */
-export function getProductDescription(productId: string): string {
+export function getProductDescription(productId) {
   return PRODUCTS[productId]?.description || '';
 }
 
 /**
  * List all available products
  */
-export function getAllProducts(): Record<string, ProductConfig> {
+export function getAllProducts() {
   return PRODUCTS;
 }

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
-import { PRODUCTS, getProductDescription } from './config/products.ts';
+import { PRODUCTS, getProductDescription } from './config/products.js';
 
 dotenv.config({ path: '.env.local' });
 
@@ -23,13 +23,11 @@ function validateEnvironmentVariables() {
 }
 
 /**
- * Validate that a URL is safe (relative or same-origin)
+ * Validate that a URL is safe for Stripe redirects
+ * Stripe requires absolute URLs (http:// or https://)
  */
 function isValidRedirectUrl(url) {
   if (!url) return false;
-  
-  // Allow relative URLs
-  if (url.startsWith('/')) return true;
   
   try {
     const urlObj = new URL(url);
@@ -37,6 +35,7 @@ function isValidRedirectUrl(url) {
     if (!['http:', 'https:'].includes(urlObj.protocol)) return false;
     return true;
   } catch {
+    // Not a valid absolute URL
     return false;
   }
 }
@@ -82,12 +81,24 @@ app.post('/api/payment/checkout', async (req, res) => {
       return res.status(400).json({ error: 'Invalid product ID' });
     }
 
-    // SECURITY: Validate redirect URLs
-    if (!isValidRedirectUrl(successUrl)) {
-      return res.status(400).json({ error: 'Invalid success URL' });
+    // SECURITY: Validate redirect URLs - must be absolute URLs for Stripe
+    try {
+      new URL(successUrl);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid success URL format' });
     }
-    if (!isValidRedirectUrl(cancelUrl)) {
-      return res.status(400).json({ error: 'Invalid cancel URL' });
+    try {
+      new URL(cancelUrl);
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid cancel URL format' });
+    }
+
+    // SECURITY: Reject dangerous protocols
+    if (!successUrl.startsWith('http://') && !successUrl.startsWith('https://')) {
+      return res.status(400).json({ error: 'Success URL must use http:// or https://' });
+    }
+    if (!cancelUrl.startsWith('http://') && !cancelUrl.startsWith('https://')) {
+      return res.status(400).json({ error: 'Cancel URL must use http:// or https://' });
     }
 
     const sessionParams = {
@@ -195,8 +206,8 @@ app.get('/api/payment/callback', (req, res) => {
   try {
     const { session_id } = req.query;
     
-    // SECURITY: Validate session_id format (Stripe session IDs are prefixed with cs_)
-    if (!session_id || typeof session_id !== 'string' || !session_id.match(/^cs_[a-z0-9]+$/i)) {
+    // SECURITY: Validate session_id format (Stripe session IDs start with cs_)
+    if (!session_id || typeof session_id !== 'string' || !session_id.startsWith('cs_')) {
       return res.status(400).json({ error: 'Invalid session ID format' });
     }
     
@@ -251,7 +262,12 @@ app.use(express.static(distPath));
 
 // Serve index.html for all other routes (SPA fallback)
 // Only serve index.html for routes that don't have a file extension (to avoid overriding static assets)
-app.get('*', (req, res) => {
+app.get('*', (req, res, next) => {
+  // Skip /api routes - they should be handled by specific routes above
+  if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) {
+    return next();
+  }
+  
   // Don't serve index.html for requests with file extensions (static assets should be handled by express.static)
   if (path.extname(req.path)) {
     return res.status(404).send('Not found');
