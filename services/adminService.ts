@@ -405,6 +405,97 @@ export async function unassignVpnUrl(vpnUrlId: string): Promise<VpnUrl | null> {
 }
 
 /**
+ * Get next available VPN URL (active and not sold)
+ */
+export async function getAvailableVpnUrl(): Promise<VpnUrl | null> {
+  try {
+    const { data, error } = await supabase
+      .from('vpn_urls')
+      .select('*')
+      .eq('status', 'active')
+      .is('assigned_to_user_id', null)
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || null;
+  } catch (error) {
+    logger.error('Error getting available VPN URL:', error);
+    throw error;
+  }
+}
+
+/**
+ * Assign VPN URL to user and mark as sold
+ */
+export async function assignVpnUrlToUserOnPurchase(
+  vpnUrlId: string,
+  userId: string
+): Promise<VpnUrl | null> {
+  try {
+    const { data, error } = await supabase
+      .from('vpn_urls')
+      .update({
+        assigned_to_user_id: userId,
+        assigned_at: new Date().toISOString(),
+        status: 'used', // Mark as sold/used
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', vpnUrlId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    logger.log(`VPN URL assigned to user ${userId}:`, vpnUrlId);
+    return data;
+  } catch (error) {
+    logger.error('Error assigning VPN URL to user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get VPN URL assigned to user
+ */
+export async function getUserAssignedVpnUrl(userId: string): Promise<VpnUrl | null> {
+  try {
+    const { data, error } = await supabase
+      .from('vpn_urls')
+      .select('*')
+      .eq('assigned_to_user_id', userId)
+      .eq('status', 'used')
+      .order('assigned_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || null;
+  } catch (error) {
+    logger.error('Error getting user assigned VPN URL:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all VPN URLs assigned to user
+ */
+export async function getUserAssignedVpnUrls(userId: string): Promise<VpnUrl[]> {
+  try {
+    const { data, error } = await supabase
+      .from('vpn_urls')
+      .select('*')
+      .eq('assigned_to_user_id', userId)
+      .order('assigned_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    logger.error('Error getting user assigned VPN URLs:', error);
+    throw error;
+  }
+}
+
+/**
  * Get admin statistics
  */
 export async function getAdminStats(): Promise<AdminStats> {

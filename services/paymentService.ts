@@ -2,6 +2,7 @@ import { supabase } from './supabaseService';
 import { createAccessToken, generateAccessUrl, User } from './userService';
 import { logger } from '../utils/logger';
 import { getExpiryDaysForProduct, getProductName, getProductDescription } from '../config/products';
+import { getAvailableVpnUrl, assignVpnUrlToUserOnPurchase } from './adminService';
 
 /**
  * 购买记录接口
@@ -32,6 +33,8 @@ export async function handlePaymentSuccess(
   purchase: Purchase;
   accessToken: any;
   accessUrl: string;
+  vpnUrl?: string;
+  vpnAssignmentSuccess: boolean;
 }> {
   try {
     // 1. 保存购买记录
@@ -60,10 +63,36 @@ export async function handlePaymentSuccess(
     // 3. 生成访问 URL
     const accessUrl = generateAccessUrl(accessToken.token);
 
+    // 4. 分配 VPN URL（如果是 VPN 产品）
+    let vpnUrl: string | undefined;
+    let vpnAssignmentSuccess = false;
+    
+    if (productId.startsWith('vpn-')) {
+      try {
+        const availableVpnUrl = await getAvailableVpnUrl();
+        
+        if (availableVpnUrl) {
+          const assignedUrl = await assignVpnUrlToUserOnPurchase(availableVpnUrl.id, userId);
+          if (assignedUrl) {
+            vpnUrl = assignedUrl.url;
+            vpnAssignmentSuccess = true;
+            logger.log(`VPN URL assigned to user ${userId} for product ${productId}`);
+          }
+        } else {
+          logger.warn(`No available VPN URLs for product ${productId}`);
+        }
+      } catch (vpnError) {
+        logger.error('Error assigning VPN URL:', vpnError);
+        // 不中断购买流程，即使 VPN URL 分配失败
+      }
+    }
+
     return {
       purchase,
       accessToken,
       accessUrl,
+      vpnUrl,
+      vpnAssignmentSuccess,
     };
   } catch (error) {
     logger.error('Error handling payment success:', error);
@@ -197,12 +226,25 @@ export async function updatePurchaseStatus(
 export function generateEmailContent(
   user: User,
   productId: string,
-  accessUrl: string
+  accessUrl: string,
+  vpnUrl?: string
 ): { subject: string; html: string; text: string } {
   const productName = getProductName(productId);
   const expiryDays = getExpiryDaysForProduct(productId);
+  const isVpnProduct = productId.startsWith('vpn-');
 
   const subject = `您的 ${productName} 已准备好！`;
+
+  const vpnSection = vpnUrl ? `
+          <h3>VPN 连接信息：</h3>
+          <p>您的专属 VPN 地址已分配，请复制以下地址到您的 VPN 客户端：</p>
+          <div style="background-color: #f5f5f5; padding: 15px; border-radius: 6px; word-break: break-all; font-family: monospace; font-size: 12px;">
+            ${vpnUrl}
+          </div>
+          <p style="color: #666; font-size: 12px; margin-top: 10px;">
+            <strong>注意：</strong>此 VPN 地址仅供您个人使用，请勿分享给他人。
+          </p>
+  ` : '';
 
   const html = `
     <!DOCTYPE html>
@@ -237,18 +279,22 @@ export function generateEmailContent(
           
           <p>感谢您的购买！您已成功购买 <strong>${productName}</strong>。</p>
           
+          ${isVpnProduct ? '' : `
           <p>您可以使用下面的链接访问您的下载内容：</p>
           
           <a href="${accessUrl}" class="button">点击这里访问您的内容</a>
           
           <p>或者复制以下链接到浏览器：<br>
           <code>${accessUrl}</code></p>
+          `}
+          
+          ${vpnSection}
           
           <h3>重要信息：</h3>
           <ul>
-            <li>此链接将在 ${expiryDays} 天后过期</li>
-            <li>您可以无限次下载</li>
-            <li>请妥善保管此链接</li>
+            <li>此 ${isVpnProduct ? 'VPN' : '下载'} 链接将在 ${expiryDays} 天后过期</li>
+            ${isVpnProduct ? '<li>您可以在有效期内无限次连接</li>' : '<li>您可以无限次下载</li>'}
+            <li>请妥善保管此信息</li>
           </ul>
           
           <p>如有问题，请联系我们的支持团队。</p>
@@ -262,6 +308,14 @@ export function generateEmailContent(
     </html>
   `;
 
+  const vpnTextSection = vpnUrl ? `
+VPN 连接信息：
+您的专属 VPN 地址已分配，请在您的 VPN 客户端中使用以下地址：
+${vpnUrl}
+
+注意：此 VPN 地址仅供您个人使用，请勿分享给他人。
+  ` : '';
+
   const text = `
 感谢您的购买！
 
@@ -269,13 +323,15 @@ export function generateEmailContent(
 
 感谢您的购买！您已成功购买 ${productName}。
 
-您可以使用下面的链接访问您的下载内容：
+${isVpnProduct ? '' : `您可以使用下面的链接访问您的下载内容：
 ${accessUrl}
+`}
+${vpnTextSection}
 
 重要信息：
-- 此链接将在 ${expiryDays} 天后过期
-- 您可以无限次下载
-- 请妥善保管此链接
+- 此 ${isVpnProduct ? 'VPN' : '下载'} 链接将在 ${expiryDays} 天后过期
+${isVpnProduct ? '- 您可以在有效期内无限次连接' : '- 您可以无限次下载'}
+- 请妥善保管此信息
 
 如有问题，请联系我们的支持团队。
 
