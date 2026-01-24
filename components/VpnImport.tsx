@@ -19,6 +19,7 @@ import {
   VpnUrlWithUser,
   searchVpnUrls,
 } from '../services/adminService';
+import { parseVlessUrls, validateVlessConfig, VlessConfig } from '../utils/vlessParser';
 
 interface VpnImportProps {
   onSuccess?: () => void;
@@ -27,7 +28,7 @@ interface VpnImportProps {
 export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
   const [activeTab, setActiveTab] = useState<'import' | 'inventory'>('import');
   const [file, setFile] = useState<File | null>(null);
-  const [previewData, setPreviewData] = useState<Array<{url: string; day_period: number; traffic_limit: number}>>([]);
+  const [previewData, setPreviewData] = useState<VlessConfig[]>([]);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{
     success: boolean;
@@ -36,6 +37,9 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
     errors: string[];
   } | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [textInput, setTextInput] = useState('');
+  const [dayPeriod, setDayPeriod] = useState(30);
+  const [trafficLimitGB, setTrafficLimitGB] = useState(100);
 
   // Inventory tab states
   const [vpnUrls, setVpnUrls] = useState<VpnUrlWithUser[]>([]);
@@ -94,11 +98,11 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
     const files = e.dataTransfer.files;
     if (files && files[0]) {
       const droppedFile = files[0];
-      if (droppedFile.type === 'text/csv' || droppedFile.name.endsWith('.csv')) {
+      if (droppedFile.type === 'text/plain' || droppedFile.name.endsWith('.txt')) {
         setFile(droppedFile);
-        parseCSV(droppedFile);
+        parseTextFile(droppedFile);
       } else {
-        alert('Please drop a CSV file');
+        alert('Please drop a text file (.txt)');
       }
     }
   };
@@ -107,50 +111,58 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
     const files = e.currentTarget.files;
     if (files && files[0]) {
       const selectedFile = files[0];
-      if (selectedFile.type === 'text/csv' || selectedFile.name.endsWith('.csv')) {
+      if (selectedFile.type === 'text/plain' || selectedFile.name.endsWith('.txt')) {
         setFile(selectedFile);
-        parseCSV(selectedFile);
+        parseTextFile(selectedFile);
       } else {
-        alert('Please select a CSV file');
+        alert('Please select a text file (.txt)');
       }
     }
   };
 
-  const parseCSV = (file: File) => {
+  const parseTextFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const text = e.target?.result as string;
-        const lines = text.split('\n').filter((line) => line.trim());
-
-        // Parse CSV - expect: url,day_period,traffic_limit
-        const data = lines
-          .slice(1) // Skip header
-          .map((line) => {
-            const [url, dayPeriodStr, trafficLimitStr] = line.split(',').map((s) => s.trim());
-            const dayPeriod = parseInt(dayPeriodStr, 10);
-            const trafficLimit = parseInt(trafficLimitStr, 10);
-
-            if (!url || isNaN(dayPeriod) || isNaN(trafficLimit)) {
-              throw new Error(`Invalid data in row: ${line}`);
-            }
-
-            return {
-              url,
-              day_period: dayPeriod,
-              traffic_limit: trafficLimit,
-            };
-          });
-
-        setPreviewData(data);
-        setImportResult(null);
+        parseVlessText(text);
       } catch (error) {
-        logger.error('CSV parse error:', error);
-        alert(`Error parsing CSV: ${(error as Error).message}`);
+        logger.error('File parse error:', error);
+        alert(`Error parsing file: ${(error as Error).message}`);
         setPreviewData([]);
       }
     };
     reader.readAsText(file);
+  };
+
+  const parseVlessText = (text: string) => {
+    const configs = parseVlessUrls(text);
+    
+    if (configs.length === 0) {
+      alert('No valid VLESS URLs found in the text');
+      setPreviewData([]);
+      return;
+    }
+
+    // Validate all configs
+    const errors: string[] = [];
+    const validConfigs: VlessConfig[] = [];
+
+    configs.forEach((config, index) => {
+      const error = validateVlessConfig(config);
+      if (error) {
+        errors.push(`URL ${index + 1}: ${error}`);
+      } else {
+        validConfigs.push(config);
+      }
+    });
+
+    if (errors.length > 0) {
+      alert(`Validation errors:\n${errors.join('\n')}`);
+    }
+
+    setPreviewData(validConfigs);
+    setImportResult(null);
   };
 
   const handleImport = async () => {
@@ -161,7 +173,15 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
 
     try {
       setIsImporting(true);
-      const result = await bulkImportVpnUrls(previewData);
+      // Convert VlessConfig to the format expected by bulkImportVpnUrls
+      const trafficLimitBytes = trafficLimitGB * 1024 * 1024 * 1024; // Convert GB to bytes
+      const urlsToImport = previewData.map((config) => ({
+        url: config.rawUrl,
+        day_period: dayPeriod,
+        traffic_limit: trafficLimitBytes,
+      }));
+      
+      const result = await bulkImportVpnUrls(urlsToImport);
       setImportResult({
         success: result.failed === 0,
         successCount: result.success,
@@ -292,22 +312,94 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
         <div className="space-y-6">
           {/* Instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 className="font-semibold text-blue-900 mb-2">CSV Format Instructions</h3>
+            <h3 className="font-semibold text-blue-900 mb-2">VLESS URL Format Instructions</h3>
             <p className="text-blue-800 text-sm mb-4">
-              Your CSV file must have the following columns in this order:
+              Your text file should contain one VLESS URL per line. Each URL will be validated and imported.
             </p>
-            <div className="bg-white p-3 rounded font-mono text-sm text-slate-700 mb-4">
-              url,day_period,traffic_limit
+            <div className="text-blue-800 text-sm space-y-2 mb-4">
+              <p><strong>VLESS URL Format:</strong></p>
+              <p className="font-mono text-xs text-slate-700 break-all">
+                vless://uuid@host:port?type=tcp&encryption=none&security=reality&pbk=xxx&fp=chrome&sni=xxx&sid=xxx&spx=%2F#name
+              </p>
             </div>
             <div className="text-blue-800 text-sm space-y-2">
-              <p>• <strong>url</strong>: The VPN URL (e.g., vpn.example.com)</p>
-              <p>• <strong>day_period</strong>: Validity period in days (e.g., 30)</p>
-              <p>• <strong>traffic_limit</strong>: Traffic limit in bytes (e.g., 1073741824 for 1GB)</p>
+              <p><strong>Example VLESS URLs:</strong></p>
+              <div className="bg-white p-3 rounded font-mono text-xs text-slate-700 space-y-2 break-all">
+                <p>vless://c66c6995-8fa3-4460-a028-45ea8857fc92@95.163.196.227:443?type=tcp&encryption=none&security=reality&pbk=HsPwdYAZ2sM2h1uBfVTUMJo2tABn8xmPQhgjaUx0LX4&fp=chrome&sni=www.apple.com&sid=d363&spx=%2F#ccjj-r7725jpm</p>
+              </div>
             </div>
-            <div className="mt-4 bg-white p-3 rounded text-sm">
-              <p className="font-semibold text-slate-900 mb-2">Example row:</p>
-              <p className="font-mono text-slate-700">vpn1.example.com,30,1073741824</p>
+            <div className="mt-4 text-blue-800 text-sm">
+              <p><strong>Configurable Settings:</strong></p>
+              <ul className="list-disc list-inside space-y-1 text-xs">
+                <li>Validity period: 1-3650 days (default: 30)</li>
+                <li>Traffic limit: 0.1-10000 GB (default: 100)</li>
+                <li>Applied to all imported URLs</li>
+              </ul>
             </div>
+          </div>
+
+          {/* Configuration Section */}
+          <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-slate-900">Import Settings</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Validity Period (Days)
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="3650"
+                  value={dayPeriod}
+                  onChange={(e) => setDayPeriod(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chinaRed"
+                />
+                <p className="text-xs text-slate-500">Applied to all imported URLs</p>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Traffic Limit (GB)
+                </label>
+                <input
+                  type="number"
+                  min="0.1"
+                  max="10000"
+                  step="0.1"
+                  value={trafficLimitGB}
+                  onChange={(e) => setTrafficLimitGB(Math.max(0.1, parseFloat(e.target.value) || 100))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chinaRed"
+                />
+                <p className="text-xs text-slate-500">Applied to all imported URLs</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Text Input Area */}
+          <div className="space-y-3">
+            <h3 className="text-lg font-semibold text-slate-900">Paste VLESS URLs</h3>
+            <p className="text-slate-600 text-sm">
+              Paste one or more VLESS URLs below (one URL per line):
+            </p>
+            <textarea
+              value={textInput}
+              onChange={(e) => setTextInput(e.target.value)}
+              placeholder="vless://uuid@host:port?type=tcp&encryption=none&security=reality&pbk=xxx&fp=chrome&sni=xxx&sid=xxx&spx=%2F#name"
+              className="w-full h-32 px-4 py-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chinaRed font-mono text-sm resize-none"
+            />
+            <button
+              onClick={() => parseVlessText(textInput)}
+              disabled={!textInput.trim()}
+              className="w-full px-6 py-2 bg-chinaRed text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Parse URLs
+            </button>
+          </div>
+
+          {/* Divider */}
+          <div className="relative flex items-center space-x-4">
+            <div className="flex-1 border-t border-slate-300"></div>
+            <span className="text-slate-500 text-sm font-semibold">OR</span>
+            <div className="flex-1 border-t border-slate-300"></div>
           </div>
 
           {/* File Upload */}
@@ -323,27 +415,34 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
             }`}
           >
             <Upload className="w-12 h-12 text-slate-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Upload CSV File</h3>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Upload Text File</h3>
             <p className="text-slate-600 mb-6">
-              Drag and drop your CSV file here or click to select
+              Drag and drop your text file here or click to select
             </p>
             <label className="inline-block px-6 py-2 bg-chinaRed text-white rounded-lg hover:bg-red-700 transition-colors cursor-pointer">
               Select File
               <input
                 type="file"
-                accept=".csv"
+                accept=".txt"
                 onChange={handleFileChange}
                 className="hidden"
               />
             </label>
           </div>
 
-          {/* File Info */}
-          {file && (
+          {/* Input Info */}
+          {(file || textInput.trim()) && (
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-              <p className="text-sm text-slate-600">
-                <strong>File:</strong> {file.name}
-              </p>
+              {file && (
+                <p className="text-sm text-slate-600">
+                  <strong>File:</strong> {file.name}
+                </p>
+              )}
+              {textInput.trim() && (
+                <p className="text-sm text-slate-600">
+                  <strong>Input:</strong> Text area with {textInput.split('\n').filter(l => l.trim().startsWith('vless://')).length} VLESS URL(s)
+                </p>
+              )}
             </div>
           )}
 
@@ -358,6 +457,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
                   onClick={() => {
                     setPreviewData([]);
                     setFile(null);
+                    setTextInput('');
                   }}
                   className="text-sm text-slate-600 hover:text-slate-900"
                 >
@@ -369,22 +469,62 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-100 border-b border-slate-200">
                     <tr>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">#</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">URL</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Days</th>
-                      <th className="px-4 py-3 text-left font-semibold text-slate-700">Traffic Limit</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">#</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Name</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">UUID</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Host</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Port</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Type</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Security</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">FP</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">SNI</th>
+                      <th className="px-3 py-2 text-left font-semibold text-slate-700">Details</th>
                     </tr>
                   </thead>
                   <tbody>
                     {previewData.slice(0, 10).map((item, index) => (
                       <tr key={index} className="border-b border-slate-200 hover:bg-slate-50">
-                        <td className="px-4 py-3 text-slate-600">{index + 1}</td>
-                        <td className="px-4 py-3 font-mono text-xs text-slate-900">
-                          {maskUrl(item.url)}
+                        <td className="px-3 py-2 text-slate-600 text-xs font-semibold">{index + 1}</td>
+                        <td className="px-3 py-2 text-slate-900 text-xs font-medium">{item.name || '-'}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-slate-600">
+                          {maskUrl(item.uuid)}
                         </td>
-                        <td className="px-4 py-3 text-slate-900">{item.day_period}</td>
-                        <td className="px-4 py-3 text-slate-900">
-                          {formatTrafficLimit(item.traffic_limit)}
+                        <td className="px-3 py-2 font-mono text-xs text-slate-600">{item.host}</td>
+                        <td className="px-3 py-2 text-slate-900 text-xs font-semibold">{item.port}</td>
+                        <td className="px-3 py-2">
+                          <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-semibold">
+                            {item.protocol}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                            {item.security}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs text-slate-600">{item.fp || '-'}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-slate-600">{item.sni || '-'}</td>
+                        <td className="px-3 py-2 text-xs">
+                          <details className="cursor-pointer">
+                            <summary className="text-chinaRed hover:text-red-700 font-semibold">
+                              Show
+                            </summary>
+                            <div className="mt-2 p-2 bg-slate-50 rounded text-xs space-y-1 border border-slate-200">
+                              {item.encryption && (
+                                <p><strong>Encryption:</strong> {item.encryption}</p>
+                              )}
+                              {item.pbk && (
+                                <p className="break-all"><strong>PBK:</strong> <span className="font-mono text-xs">{maskUrl(item.pbk)}</span></p>
+                              )}
+                              {item.sid && (
+                                <p><strong>SID:</strong> {item.sid}</p>
+                              )}
+                              {item.spx && (
+                                <p><strong>SPX:</strong> {item.spx}</p>
+                              )}
+                              <p><strong>Raw URL:</strong></p>
+                              <p className="font-mono text-xs break-all bg-white p-1 rounded border">{maskUrl(item.rawUrl)}</p>
+                            </div>
+                          </details>
                         </td>
                       </tr>
                     ))}
