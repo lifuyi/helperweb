@@ -735,6 +735,245 @@ export async function deleteProduct(productId: string): Promise<void> {
 }
 
 /**
+ * Admin User Interface
+ */
+export interface AdminUser {
+  id: string;
+  user_id: string;
+  email: string;
+  username: string;
+  role: 'admin' | 'moderator' | 'viewer';
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Get all admin users
+ */
+export async function getAllAdminUsers(): Promise<AdminUser[]> {
+  try {
+    const { data: adminUsers, error: adminError } = await supabase
+      .from('admin_users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (adminError) throw adminError;
+    if (!adminUsers || adminUsers.length === 0) return [];
+
+    // Fetch user emails for each admin
+    const adminUsersWithEmails = await Promise.all(
+      adminUsers.map(async (admin) => {
+        const { data: user, error: userError } = await supabase
+          .from('users')
+          .select('email, username')
+          .eq('id', admin.user_id)
+          .single();
+
+        if (userError) {
+          logger.error('Error fetching user for admin:', userError);
+          return {
+            ...admin,
+            email: 'Unknown',
+            username: 'Unknown',
+          };
+        }
+
+        return {
+          ...admin,
+          email: user?.email || 'Unknown',
+          username: user?.username || 'Unknown',
+        };
+      })
+    );
+
+    return adminUsersWithEmails;
+  } catch (error) {
+    logger.error('Error getting admin users:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create admin user
+ */
+export async function createAdminUser(
+  email: string,
+  role: 'admin' | 'moderator' | 'viewer' = 'viewer'
+): Promise<AdminUser | null> {
+  try {
+    // First, find the user by email
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, username')
+      .eq('email', email)
+      .single();
+
+    if (userError) throw new Error(`User with email ${email} not found`);
+
+    // Create admin user record
+    const { data, error } = await supabase
+      .from('admin_users')
+      .insert({
+        user_id: user.id,
+        role,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return {
+      ...data,
+      email: user.email,
+      username: user.username,
+    };
+  } catch (error) {
+    logger.error('Error creating admin user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update admin user role
+ */
+export async function updateAdminUserRole(
+  userId: string,
+  role: 'admin' | 'moderator' | 'viewer'
+): Promise<AdminUser | null> {
+  try {
+    const { data, error } = await supabase
+      .from('admin_users')
+      .update({
+        role,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Fetch user details
+    const { data: user } = await supabase
+      .from('users')
+      .select('email, username')
+      .eq('id', userId)
+      .single();
+
+    return {
+      ...data,
+      email: user?.email || 'Unknown',
+      username: user?.username || 'Unknown',
+    };
+  } catch (error) {
+    logger.error('Error updating admin user role:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete admin user
+ */
+export async function deleteAdminUser(userId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('admin_users')
+      .delete()
+      .eq('user_id', userId);
+
+    if (error) throw error;
+    logger.log(`Admin user ${userId} deleted successfully`);
+  } catch (error) {
+    logger.error('Error deleting admin user:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if user is admin
+ */
+export async function isUserAdmin(userId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return !!data;
+  } catch (error) {
+    logger.error('Error checking admin status:', error);
+    return false;
+  }
+}
+
+/**
+ * Get user admin role
+ */
+export async function getUserAdminRole(
+  userId: string
+): Promise<'admin' | 'moderator' | 'viewer' | null> {
+  try {
+    const { data, error } = await supabase
+      .from('admin_users')
+      .select('role')
+      .eq('user_id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data?.role || null;
+  } catch (error) {
+    logger.error('Error getting user admin role:', error);
+    return null;
+  }
+}
+
+/**
+ * Check inventory and send alerts if low
+ */
+export async function checkAndSendInventoryAlerts(): Promise<void> {
+  try {
+    // Get current stats
+    const stats = await getAdminStats();
+    
+    // Check if inventory is low (less than 20% available)
+    const availablePercentage = stats.totalVpnUrls > 0 
+      ? ((stats.activeVpnUrls / stats.totalVpnUrls) * 100)
+      : 0;
+
+    if (availablePercentage > 20) {
+      logger.log('Inventory levels normal');
+      return;
+    }
+
+    logger.warn(`Low inventory alert: ${availablePercentage.toFixed(1)}% available`);
+
+    // Get all admin emails
+    const adminUsers = await getAllAdminUsers();
+    const adminEmails = adminUsers
+      .filter(u => u.role === 'admin' || u.role === 'moderator')
+      .map(u => u.email);
+
+    if (adminEmails.length === 0) {
+      logger.warn('No admin emails found for alerts');
+      return;
+    }
+
+    // Send email alert
+    const { sendLowInventoryAlert } = await import('./emailService');
+    await sendLowInventoryAlert(adminEmails, {
+      totalVpnUrls: stats.totalVpnUrls,
+      activeVpnUrls: stats.activeVpnUrls,
+      usedVpnUrls: stats.usedVpnUrls,
+      utilization: ((stats.usedVpnUrls / stats.totalVpnUrls) * 100),
+    });
+  } catch (error) {
+    logger.error('Error checking inventory and sending alerts:', error);
+  }
+}
+
+/**
  * Search VPN URLs
  */
 export async function searchVpnUrls(query: string): Promise<VpnUrlWithUser[]> {
