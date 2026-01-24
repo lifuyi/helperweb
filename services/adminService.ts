@@ -1,6 +1,7 @@
 import { supabase } from './supabaseService';
 import { Purchase } from './paymentService';
 import { logger } from '../utils/logger';
+import { parseVlessUrl } from '../utils/vlessParser';
 
 /**
  * VPN URL Interface
@@ -161,7 +162,7 @@ export async function addVpnUrl(
 }
 
 /**
- * Bulk import VPN URLs
+ * Bulk import VPN URLs with VLESS configuration parsing
  */
 export async function bulkImportVpnUrls(
   vpnData: Array<{ url: string; day_period: number; traffic_limit: number }>
@@ -178,12 +179,34 @@ export async function bulkImportVpnUrls(
       const { data, error } = await supabase
         .from('vpn_urls')
         .insert(
-          batch.map((item) => ({
-            url: item.url,
-            day_period: item.day_period,
-            traffic_limit: item.traffic_limit,
-            status: 'active',
-          }))
+          batch.map((item) => {
+            // Parse VLESS configuration
+            const vlessConfig = parseVlessUrl(item.url);
+            
+            return {
+              url: item.url,
+              day_period: item.day_period,
+              traffic_limit: item.traffic_limit,
+              status: 'active',
+              // VLESS-specific fields
+              vless_uuid: vlessConfig?.uuid || null,
+              vless_host: vlessConfig?.host || null,
+              vless_port: vlessConfig?.port || null,
+              protocol: vlessConfig?.protocol || 'tcp',
+              encryption: vlessConfig?.encryption || 'none',
+              security_type: vlessConfig?.security || 'none',
+              fingerprint: vlessConfig?.fp || null,
+              sni: vlessConfig?.sni || null,
+              session_id: vlessConfig?.sid || null,
+              path: vlessConfig?.spx || null,
+              vless_name: vlessConfig?.name || null,
+              pbk: vlessConfig?.pbk || null,
+              // Usage tracking
+              traffic_used: 0,
+              usage_count: 0,
+              is_active: true,
+            };
+          })
         )
         .select();
 
