@@ -574,6 +574,167 @@ export async function searchPurchases(query: string): Promise<PurchaseWithUser[]
 }
 
 /**
+ * Product interface
+ */
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price_cents: number;
+  expiry_days: number;
+  category: string;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Get all products
+ */
+export async function getAllProducts(): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    logger.error('Error getting all products:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get active products
+ */
+export async function getActiveProducts(): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    logger.error('Error getting active products:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get product by ID
+ */
+export async function getProduct(productId: string): Promise<Product | null> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('id', productId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data || null;
+  } catch (error) {
+    logger.error('Error getting product:', error);
+    throw error;
+  }
+}
+
+/**
+ * Create or update product
+ */
+export async function upsertProduct(product: Omit<Product, 'created_at' | 'updated_at'>): Promise<Product | null> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .upsert({
+        ...product,
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    logger.log(`Product ${product.id} upserted successfully`);
+    return data;
+  } catch (error) {
+    logger.error('Error upserting product:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update product price
+ */
+export async function updateProductPrice(productId: string, priceCents: number): Promise<Product | null> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .update({
+        price_cents: priceCents,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', productId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    logger.log(`Product ${productId} price updated to ${priceCents} cents`);
+    return data;
+  } catch (error) {
+    logger.error('Error updating product price:', error);
+    throw error;
+  }
+}
+
+/**
+ * Update product status (active/inactive)
+ */
+export async function updateProductStatus(productId: string, isActive: boolean): Promise<Product | null> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .update({
+        is_active: isActive,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', productId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    logger.log(`Product ${productId} status updated to ${isActive ? 'active' : 'inactive'}`);
+    return data;
+  } catch (error) {
+    logger.error('Error updating product status:', error);
+    throw error;
+  }
+}
+
+/**
+ * Delete product
+ */
+export async function deleteProduct(productId: string): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+
+    if (error) throw error;
+    logger.log(`Product ${productId} deleted successfully`);
+  } catch (error) {
+    logger.error('Error deleting product:', error);
+    throw error;
+  }
+}
+
+/**
  * Search VPN URLs
  */
 export async function searchVpnUrls(query: string): Promise<VpnUrlWithUser[]> {
