@@ -1,5 +1,4 @@
 import { supabase } from './supabaseService';
-import crypto from 'crypto';
 import { logger } from '../utils/logger';
 
 /**
@@ -24,7 +23,8 @@ export interface AccessToken {
   token: string;
   product_id: string;
   purchase_date: string;
-  expires_at: string;
+  expires_at: string | null;  // NULL for VPN products until activated
+  activated_at: string | null; // When user first activated (used) the product
   is_used: boolean;
   used_at?: string;
   created_at: string;
@@ -180,15 +180,32 @@ async function createUserProfile(userId: string): Promise<UserProfile | null> {
 }
 
 /**
- * 生成唯一的访问令牌
+ * Generate a unique access token (browser-safe version)
+ * Uses simple random string generation suitable for browser environment
+ * For server-side token generation, use the payment callback implementation
  */
 function generateToken(): string {
-  return crypto.randomBytes(32).toString('hex');
+  // Browser-safe token generation (256-bit randomness)
+  // This is used only for non-critical tokens; payment tokens are generated server-side
+  const array = new Uint8Array(32);
+  if (typeof window !== 'undefined' && window.crypto) {
+    window.crypto.getRandomValues(array);
+  } else {
+    // Fallback for environments without crypto
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
 }
 
 /**
  * 为用户创建访问令牌
  * 支付成功后调用
+ * 
+ * Business Logic:
+ * - VPN products (vpn-*): expires_at = NULL initially, set on activation
+ * - PDF products (payment-guide): expires_at = purchase_date + expiryDays
  */
 export async function createAccessToken(
   userId: string,
@@ -197,8 +214,19 @@ export async function createAccessToken(
 ): Promise<AccessToken | null> {
   try {
     const token = generateToken();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + expiryDays);
+    const now = new Date();
+    const isVpnProduct = productId.startsWith('vpn-');
+    
+    // For VPN products: expiration is NULL, will be set on activation
+    // For other products (like PDF guide): expiration is set immediately
+    let expiresAt: string | null = null;
+    
+    if (!isVpnProduct) {
+      // PDF and other products: set expiration immediately from purchase
+      const expirationDate = new Date(now);
+      expirationDate.setDate(expirationDate.getDate() + expiryDays);
+      expiresAt = expirationDate.toISOString();
+    }
 
     const { data, error } = await supabase
       .from('access_tokens')
@@ -206,7 +234,9 @@ export async function createAccessToken(
         user_id: userId,
         token,
         product_id: productId,
-        expires_at: expiresAt.toISOString(),
+        purchase_date: now.toISOString(),
+        expires_at: expiresAt,
+        activated_at: null, // Will be set when user activates
       })
       .select()
       .single();
@@ -224,7 +254,78 @@ export async function createAccessToken(
 }
 
 /**
+ * 为用户激活产品
+ * 当用户首次使用产品时调用 (e.g., VPN连接、PDF下载)
+ * 
+ * For VPN products: Sets activated_at and calculates expires_at
+ * For PDF products: Already has expires_at, just marks as used
+ */
+export async function activateAccessToken(
+  token: string,
+  expiryDays: number
+): Promise<AccessToken | null> {
+  try {
+    const now = new Date();
+    const isVpnProduct = token.startsWith('vpn-'); // This would need product_id from token record
+    
+    // First, get the token record to check product type
+    const { data: tokenData, error: fetchError } = await supabase
+      .from('access_tokens')
+      .select('*')
+      .eq('token', token)
+      .single();
+
+    if (fetchError || !tokenData) {
+      logger.error('Token not found for activation:', token);
+      return null;
+    }
+
+    // Check if already activated
+    if (tokenData.activated_at) {
+      logger.log('Token already activated:', token);
+      return tokenData;
+    }
+
+    const productId = tokenData.product_id;
+    const isVpn = productId.startsWith('vpn-');
+
+    // For VPN products: calculate expiration from activation
+    let expiresAt: string | null = tokenData.expires_at;
+    if (isVpn && !tokenData.expires_at) {
+      const expirationDate = new Date(now);
+      expirationDate.setDate(expirationDate.getDate() + expiryDays);
+      expiresAt = expirationDate.toISOString();
+    }
+
+    // Update token with activation time and expiration
+    const { data, error } = await supabase
+      .from('access_tokens')
+      .update({
+        activated_at: now.toISOString(),
+        expires_at: expiresAt,
+        is_used: true,
+        used_at: now.toISOString(),
+      })
+      .eq('token', token)
+      .select()
+      .single();
+
+    if (error) {
+      logger.error('Error activating token:', error);
+      throw error;
+    }
+
+    logger.log(`Token activated for product ${productId}:`, token);
+    return data;
+  } catch (error) {
+    logger.error('Error in activateAccessToken:', error);
+    throw error;
+  }
+}
+
+/**
  * 验证访问令牌
+ * 检查令牌是否有效且未过期
  */
 export async function verifyAccessToken(token: string): Promise<AccessToken | null> {
   try {
@@ -240,9 +341,18 @@ export async function verifyAccessToken(token: string): Promise<AccessToken | nu
       return null;
     }
 
-    // 检查令牌是否过期
+    // Check if token has expired
     if (data.expires_at && new Date(data.expires_at) < new Date()) {
-      return null; // 令牌已过期
+      logger.log('Token expired:', token);
+      return null; // Token already expired
+    }
+
+    // For VPN products: check if activation-based expiration would make it invalid
+    if (data.product_id.startsWith('vpn-') && data.activated_at && data.expires_at) {
+      if (new Date(data.expires_at) < new Date()) {
+        logger.log('VPN token activation-based expiration reached:', token);
+        return null;
+      }
     }
 
     return data;

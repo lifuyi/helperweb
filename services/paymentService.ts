@@ -242,7 +242,10 @@ export function generateEmailContent(
             ${vpnUrl}
           </div>
           <p style="color: #666; font-size: 12px; margin-top: 10px;">
-            <strong>注意：</strong>此 VPN 地址仅供您个人使用，请勿分享给他人。
+            <strong>重要提示：</strong>您的 ${expiryDays} 天使用期限从<strong>您首次使用该 VPN 地址时开始计算</strong>，而非购买时间。这样可以确保您能充分利用购买的服务。
+          </p>
+          <p style="color: #666; font-size: 12px;">
+            此 VPN 地址仅供您个人使用，请勿分享给他人。
           </p>
   ` : '';
 
@@ -292,8 +295,13 @@ export function generateEmailContent(
           
           <h3>重要信息：</h3>
           <ul>
-            <li>此 ${isVpnProduct ? 'VPN' : '下载'} 链接将在 ${expiryDays} 天后过期</li>
-            ${isVpnProduct ? '<li>您可以在有效期内无限次连接</li>' : '<li>您可以无限次下载</li>'}
+            ${isVpnProduct 
+              ? `<li>此 VPN 链接将在<strong>您首次使用后的 ${expiryDays} 天内</strong>有效</li>
+                 <li>使用期限从您首次连接时开始计算</li>
+                 <li>您可以在有效期内无限次连接</li>`
+              : `<li>此下载链接将在购买后的 ${expiryDays} 天内有效</li>
+                 <li>您可以无限次下载</li>`
+            }
             <li>请妥善保管此信息</li>
           </ul>
           
@@ -313,6 +321,8 @@ VPN 连接信息：
 您的专属 VPN 地址已分配，请在您的 VPN 客户端中使用以下地址：
 ${vpnUrl}
 
+重要提示：您的 ${expiryDays} 天使用期限从您首次使用该 VPN 地址时开始计算，而非购买时间。这样可以确保您能充分利用购买的服务。
+
 注意：此 VPN 地址仅供您个人使用，请勿分享给他人。
   ` : '';
 
@@ -329,8 +339,13 @@ ${accessUrl}
 ${vpnTextSection}
 
 重要信息：
-- 此 ${isVpnProduct ? 'VPN' : '下载'} 链接将在 ${expiryDays} 天后过期
-${isVpnProduct ? '- 您可以在有效期内无限次连接' : '- 您可以无限次下载'}
+${isVpnProduct 
+  ? `- 此 VPN 链接将在您首次使用后的 ${expiryDays} 天内有效
+- 使用期限从您首次连接时开始计算
+- 您可以在有效期内无限次连接`
+  : `- 此下载链接将在购买后的 ${expiryDays} 天内有效
+- 您可以无限次下载`
+}
 - 请妥善保管此信息
 
 如有问题，请联系我们的支持团队。

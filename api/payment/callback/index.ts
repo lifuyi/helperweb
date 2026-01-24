@@ -134,13 +134,27 @@ async function handlePaymentSuccess(
 
     console.log('Purchase saved:', purchase);
 
-    // 2. Create access token with expiration based on product
+    // 2. Create access token with expiration based on product type
     const expiryDays = getExpiryDaysForProduct(productId);
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + expiryDays);
+    const isVpnProduct = productId.startsWith('vpn-');
+    const now = new Date();
+
+    // For VPN products: expires_at will be NULL, set on activation
+    // For other products (PDF guide): expires_at set immediately
+    let expiresAt: string | null = null;
+    if (!isVpnProduct) {
+      const expirationDate = new Date(now);
+      expirationDate.setDate(expirationDate.getDate() + expiryDays);
+      expiresAt = expirationDate.toISOString();
+    }
 
     const token = generateAccessToken();
-    console.log('Creating access token with expiry:', expiryDays, 'days, expires:', expiresAt.toISOString());
+    console.log('Creating access token:', {
+      productId,
+      isVpnProduct,
+      expiryDays,
+      expiresAt: expiresAt ? `Set to ${expiresAt}` : 'NULL (will be set on activation)',
+    });
     
     const { data: accessToken, error: tokenError } = await supabase
       .from('access_tokens')
@@ -148,7 +162,9 @@ async function handlePaymentSuccess(
         user_id: userId,
         product_id: productId,
         token,
-        expires_at: expiresAt.toISOString(),
+        purchase_date: now.toISOString(),
+        expires_at: expiresAt,
+        activated_at: null, // Will be set when user activates
       })
       .select()
       .single();
