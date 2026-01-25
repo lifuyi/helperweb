@@ -6,6 +6,15 @@ import { PurchaseManagement } from './PurchaseManagement';
 import { VpnImport } from './VpnImport';
 import { logger } from '../utils/logger';
 
+/**
+ * Check if user is admin
+ */
+function isAdminUser(email?: string): boolean {
+  if (!email) return false;
+  const adminEmails = import.meta.env.VITE_ADMIN_EMAILS?.split(',') || [];
+  return adminEmails.some((adminEmail) => adminEmail.trim().toLowerCase() === email.toLowerCase());
+}
+
 interface AdminDashboardProps {
   onBack: () => void;
 }
@@ -314,15 +323,5 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ stats }) => {
     </div>
   );
 };
-
-/**
- * Check if user is admin
- */
-function isAdminUser(email?: string): boolean {
-  if (!email) return false;
-
-  const adminEmails = import.meta.env.VITE_ADMIN_EMAILS?.split(',') || [];
-  return adminEmails.some((adminEmail) => adminEmail.trim().toLowerCase() === email.toLowerCase());
-}
 
 export default AdminDashboard;
