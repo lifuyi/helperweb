@@ -5,7 +5,7 @@ var stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2023-10-16"
 });
 async function createCheckoutSession(data) {
-  const { productId, productType, successUrl, cancelUrl, currency = "usd", promotionCode } = data;
+  const { productId, productType, successUrl, cancelUrl, currency = "usd", promotionCode, userId } = data;
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error("STRIPE_SECRET_KEY not configured");
   }
@@ -51,7 +51,7 @@ async function createCheckoutSession(data) {
     cancel_url: cancelUrl,
     payment_method_types: ["card"],
     allow_promotion_codes: true,
-    metadata: { productId, productType }
+    metadata: { productId, productType, ...userId && { userId } }
   };
   if (promotionCode) {
     sessionParams.discounts = [{ coupon: promotionCode }];
@@ -91,7 +91,18 @@ async function POST(request) {
       return Response.json({ error: "STRIPE_SECRET_KEY not configured in environment" }, { status: 500 });
     }
     const body = await request.json();
+    console.log("Checkout request received:", {
+      productId: body.productId,
+      productType: body.productType,
+      userId: body.userId,
+      hasPromotionCode: !!body.promotionCode,
+      currency: body.currency
+    });
     const result = await createCheckoutSession(body);
+    console.log("Checkout session created:", {
+      sessionId: result.sessionId,
+      hasUrl: !!result.url
+    });
     return Response.json(result);
   } catch (error) {
     console.error("Checkout error:", error);
