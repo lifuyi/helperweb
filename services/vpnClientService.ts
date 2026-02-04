@@ -53,20 +53,31 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
   const { userId, email, productId, sessionId } = request;
 
   try {
+    console.log('[VPN] createVpnClient called:', { userId, email, productId, sessionId });
+    
     const expiryDays = getExpiryDaysForProduct(productId);
+    console.log('[VPN] Product expiry days:', { productId, expiryDays });
+    
     if (expiryDays <= 0) {
+      console.error('[VPN] Invalid expiry days:', expiryDays);
       return { success: false, error: 'Invalid product' };
     }
 
+    console.log('[VPN] Checking for existing VPN client');
     const existing = await getUserVpnClient(userId, productId);
     if (existing) {
+      console.log('[VPN] VPN client already exists for this product');
       return { success: false, error: 'VPN client already exists for this product' };
     }
+    console.log('[VPN] No existing client, proceeding with creation');
 
+    console.log('[VPN] Calling createXuiClientWithExpiration');
     const xuiResult = await createXuiClientWithExpiration(email, expiryDays);
     if (!xuiResult) {
+      console.error('[VPN] X-UI client creation returned null');
       return { success: false, error: 'Failed to create X-UI client' };
     }
+    console.log('[VPN] X-UI client created:', xuiResult);
 
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiryDays);
@@ -154,25 +165,43 @@ async function createXuiClientWithExpiration(
   expiryDays: number
 ): Promise<{ uuid: string; inboundId: number } | null> {
   try {
+    console.log('[VPN] Starting X-UI client creation for email:', email);
+    
     const xui = await createDefaultXuiClient();
-    if (!xui) return null;
+    if (!xui) {
+      console.error('[VPN] Failed to create X-UI client instance');
+      logger.error('Failed to create X-UI API client');
+      return null;
+    }
+    console.log('[VPN] X-UI client instance created successfully');
 
+    console.log('[VPN] Fetching inbounds from X-UI');
     const inbounds = await xui.getInbounds();
+    console.log('[VPN] Inbounds fetched:', inbounds.length, 'inbound(s) available');
+    
     if (inbounds.length === 0) {
+      console.error('[VPN] No inbounds available in X-UI');
       logger.error('No inbounds available');
       return null;
     }
 
     const inbound = inbounds[0];
+    console.log('[VPN] Using inbound:', { id: inbound.id, port: inbound.port, protocol: inbound.protocol });
+    
+    console.log('[VPN] Creating client with expiry:', expiryDays, 'days');
     const created = await xui.createClient(inbound.id, email, expiryDays, 1);
+    console.log('[VPN] Client creation response:', created);
 
     if (!created) {
+      console.error('[VPN] Client creation returned null/false');
       logger.error('Failed to create X-UI client');
       return null;
     }
 
+    console.log('[VPN] X-UI client created successfully:', { uuid: created.uuid, inboundId: inbound.id });
     return { uuid: created.uuid, inboundId: inbound.id };
   } catch (error) {
+    console.error('[VPN] Error creating X-UI client:', error);
     logger.error('Error creating X-UI client:', error);
     return null;
   }
