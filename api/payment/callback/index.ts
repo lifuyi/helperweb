@@ -1,6 +1,5 @@
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { createVpnClient } from '../../services/vpnClientService';
 
 export const runtime = 'nodejs';
 
@@ -29,7 +28,7 @@ function getSupabaseClient() {
     console.error('Missing Supabase configuration:', {
       hasUrl: !!url,
       hasKey: !!key,
-      urlEnvVars: Object.keys(process.env).filter(k => k.includes('SUPABASE'),
+      urlEnvVars: Object.keys(process.env).filter(k => k.includes('SUPABASE')),
     });
     throw new Error('Supabase configuration missing in environment variables');
   }
@@ -200,17 +199,22 @@ async function handlePaymentSuccess(
         if (userError || !userData?.email) {
           console.error('Could not get user email for VPN creation:', userError);
         } else {
-          const vpnResult = await createVpnClient({
-            userId,
-            email: userData.email,
-            productId,
-            sessionId: stripeSessionId,
-          });
+          try {
+            const { createVpnClient } = await import('../../services/vpnClientService.js');
+            const vpnResult = await createVpnClient({
+              userId,
+              email: userData.email,
+              productId,
+              sessionId: stripeSessionId,
+            });
 
-          if (vpnResult.success) {
-            console.log('VPN client created successfully:', vpnResult.client?.id);
-          } else {
-            console.error('Failed to create VPN client:', vpnResult.error);
+            if (vpnResult.success) {
+              console.log('VPN client created successfully:', vpnResult.client?.id);
+            } else {
+              console.error('Failed to create VPN client:', vpnResult.error);
+            }
+          } catch (importError) {
+            console.error('Failed to import vpnClientService:', importError);
           }
         }
       } catch (vpnError) {
