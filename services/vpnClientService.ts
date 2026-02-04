@@ -274,6 +274,7 @@ export async function getUserVpnClients(userId: string): Promise<VpnClientRecord
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
+      .not('vless_uuid', 'is', null)  // Only show newly created VLESS URLs (from purchases), not old imports
       .order('created_at', { ascending: false });
 
     return data || [];
@@ -291,6 +292,7 @@ export async function getUserVpnClientsFromTable(userId: string): Promise<VpnCli
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
+      .not('vless_uuid', 'is', null)  // Only show newly created VLESS URLs (from purchases), not old imports
       .order('created_at', { ascending: false });
 
     if (error) {
