@@ -185,6 +185,9 @@ app.post('/api/payment/notify/stripe', async (req, res) => {
     switch (event.type) {
       case 'checkout.session.completed':
         console.log('Payment successful:', event.data.object.id);
+        
+        // Handle VPN product purchases
+        await handleSuccessfulPayment(event.data.object);
         break;
       case 'invoice.payment_succeeded':
         console.log('Invoice payment succeeded:', event.data.object.id);
@@ -200,6 +203,69 @@ app.post('/api/payment/notify/stripe', async (req, res) => {
     res.status(400).json({ error: 'Webhook processing error' });
   }
 });
+
+/**
+ * Handle successful Stripe payment
+ * Creates VPN client for VPN product purchases
+ */
+async function handleSuccessfulPayment(session) {
+  try {
+    const sessionId = session.id;
+    const customerEmail = session.customer_details?.email;
+    
+    if (!customerEmail) {
+      console.error('No customer email in session:', sessionId);
+      return;
+    }
+
+    // Get product info from metadata
+    const metadata = session.metadata || {};
+    const productId = metadata.productId;
+    const productType = metadata.productType;
+
+    if (!productId) {
+      console.log('No product ID in metadata for session:', sessionId);
+      return;
+    }
+
+    // Only handle VPN products
+    if (!productId.startsWith('vpn-')) {
+      console.log('Non-VPN product, skipping:', productId);
+      return;
+    }
+
+    console.log(`Processing VPN purchase: ${productId} for ${customerEmail}`);
+
+    // Get user from Supabase by email
+    const { data: user, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, email')
+      .eq('email', customerEmail)
+      .single();
+
+    if (userError || !user) {
+      console.error('User not found for email:', customerEmail);
+      return;
+    }
+
+    // Create VPN client
+    const { createVpnClient } = await import('./services/vpnClientService.js');
+    const result = await createVpnClient({
+      userId: user.id,
+      email: customerEmail,
+      productId: productId,
+      sessionId: sessionId
+    });
+
+    if (result.success) {
+      console.log(`VPN client created successfully for ${customerEmail}`);
+    } else {
+      console.error(`Failed to create VPN client: ${result.error}`);
+    }
+  } catch (error) {
+    console.error('Error handling successful payment:', error);
+  }
+}
 
 // Callback API
 app.get('/api/payment/callback', (req, res) => {
