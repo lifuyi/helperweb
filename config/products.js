@@ -94,7 +94,7 @@ export async function loadProductsFromDatabase() {
 }
 
 // Use default products initially
-let PRODUCTS = DEFAULT_PRODUCTS;
+export let PRODUCTS = DEFAULT_PRODUCTS;
 
 // Load products from database asynchronously
 if (typeof window !== 'undefined') {

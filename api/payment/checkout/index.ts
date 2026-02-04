@@ -1,9 +1,11 @@
 import Stripe from 'stripe';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60; // Allow up to 60 seconds for payment processing
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
+  timeout: 30000, // Stripe SDK timeout: 30 seconds
 });
 
 export interface CreateCheckoutSessionRequest {

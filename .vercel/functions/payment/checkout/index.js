@@ -1,8 +1,11 @@
 // api/payment/checkout/index.ts
 import Stripe from "stripe";
 var runtime = "nodejs";
+var maxDuration = 60;
 var stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16"
+  apiVersion: "2023-10-16",
+  timeout: 3e4
+  // Stripe SDK timeout: 30 seconds
 });
 async function createCheckoutSession(data) {
   const { productId, productType, successUrl, cancelUrl, currency = "usd", promotionCode, userId } = data;
@@ -116,5 +119,6 @@ export {
   GET,
   POST,
   createCheckoutSession,
+  maxDuration,
   runtime
 };

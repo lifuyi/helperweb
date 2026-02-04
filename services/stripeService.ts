@@ -21,14 +21,33 @@ export interface CreateCheckoutParams {
 
 const API_BASE = '/api/payment';
 
+async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs = 30000): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Payment request timed out. Please check your connection and try again. This may take a moment.');
+    }
+    throw error;
+  }
+}
+
 export async function createCheckoutSession(params: CreateCheckoutParams): Promise<CheckoutSession> {
   const { productId, productType = 'one-time', promotionCode, currency = 'usd', userId } = params;
 
-  // First redirect to callback to save purchase, then to success page
   const successUrl = `${window.location.origin}/api/payment/callback?session_id={CHECKOUT_SESSION_ID}&product=${productId}`;
   const cancelUrl = `${window.location.origin}/?payment_canceled=true`;
 
-  const response = await fetch(`${API_BASE}/checkout`, {
+  const response = await fetchWithTimeout(`${API_BASE}/checkout`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -42,7 +61,7 @@ export async function createCheckoutSession(params: CreateCheckoutParams): Promi
       promotionCode,
       userId,
     }),
-  });
+  }, 30000);
 
   if (!response.ok) {
     try {
@@ -66,40 +85,65 @@ export function redirectToCheckout(sessionId: string): void {
 export async function initiateCheckout(params: CreateCheckoutParams): Promise<void> {
   const { productId, productType = 'one-time', promotionCode, currency = 'usd', userId } = params;
 
-  // First redirect to callback to save purchase, then to success page
   const successUrl = `${window.location.origin}/api/payment/callback?session_id={CHECKOUT_SESSION_ID}&product=${productId}`;
   const cancelUrl = `${window.location.origin}/?payment_canceled=true`;
 
-  const response = await fetch(`${API_BASE}/checkout`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      productId,
-      productType,
-      successUrl,
-      cancelUrl,
-      currency,
-      promotionCode,
-      userId,
-    }),
-  });
+  let lastError: Error | null = null;
+  const maxRetries = 2;
 
-  if (!response.ok) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const error = await response.json();
-      throw new Error(error.error || `API error: ${response.status}`);
-    } catch (e) {
-      if (e instanceof Error && e.message.includes('API error')) {
-        throw e;
+      const response = await fetchWithTimeout(`${API_BASE}/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          productId,
+          productType,
+          successUrl,
+          cancelUrl,
+          currency,
+          promotionCode,
+          userId,
+        }),
+      }, 45000 + (attempt * 5000)); // Increase timeout with each retry
+
+      if (!response.ok) {
+        let errorMessage = `API error: ${response.status}`;
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType?.includes('application/json')) {
+            const error = await response.json();
+            errorMessage = error.error || error.message || errorMessage;
+          } else {
+            const text = await response.text();
+            errorMessage = text || errorMessage;
+          }
+        } catch (parseError) {
+          // If we can't parse the error response, just use the status
+          console.log('Could not parse error response:', parseError);
+        }
+        throw new Error(errorMessage);
       }
-      throw new Error(`API error ${response.status}: Failed to parse response`);
+
+      const { sessionId } = await response.json();
+      window.location.href = `/api/payment/checkout?sid=${sessionId}`;
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // If it's the last attempt, throw the error
+      if (attempt === maxRetries) {
+        throw lastError;
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
     }
   }
 
-  const { sessionId } = await response.json();
-  window.location.href = `/api/payment/checkout?sid=${sessionId}`;
+  throw lastError || new Error('Payment checkout failed');
 }
 
 export const PRODUCTS = {

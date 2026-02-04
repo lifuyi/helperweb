@@ -74,12 +74,18 @@ app.use(express.text({ type: 'application/json' }));
 // Checkout API - POST to create a new session
 app.post('/api/payment/checkout', async (req, res) => {
   try {
+    console.log('[PAYMENT] Checkout request started');
     const { productId, productType = 'one-time', successUrl, cancelUrl, currency = 'usd', promotionCode } = req.body;
+    
+    console.log('[PAYMENT] Request body:', { productId, productType, currency, hasPromotionCode: !!promotionCode });
     
     const product = PRODUCTS[productId];
     if (!product) {
+      console.error('[PAYMENT] Invalid product ID:', productId);
       return res.status(400).json({ error: 'Invalid product ID' });
     }
+    
+    console.log('[PAYMENT] Product found:', { productId, productName: product.name });
 
     // SECURITY: Validate redirect URLs - must be absolute URLs for Stripe
     try {
@@ -111,7 +117,7 @@ app.post('/api/payment/checkout', async (req, res) => {
               name: product.name,
               description: product.description,
             },
-            unit_amount: product.price,
+            unit_amount: product.price_cents,
           },
           quantity: 1,
         },
@@ -131,7 +137,32 @@ app.post('/api/payment/checkout', async (req, res) => {
       sessionParams.payment_method_types = ['card', 'alipay', 'wechat_pay'];
     }
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    console.log('[PAYMENT] About to call Stripe API with params:', {
+      mode: sessionParams.mode,
+      currency: sessionParams.line_items[0]?.price_data?.currency,
+      amount: sessionParams.line_items[0]?.price_data?.unit_amount,
+      hasSuccessUrl: !!sessionParams.success_url,
+      hasCancelUrl: !!sessionParams.cancel_url,
+    });
+    
+    // Wrap Stripe call with a timeout to prevent hanging
+    let session;
+    try {
+      const stripePromise = stripe.checkout.sessions.create(sessionParams);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Stripe API timeout after 25 seconds')), 25000)
+      );
+      session = await Promise.race([stripePromise, timeoutPromise]);
+    } catch (stripeError) {
+      console.error('[PAYMENT] Stripe API error:', {
+        message: stripeError.message,
+        type: stripeError.type,
+        statusCode: stripeError.statusCode,
+      });
+      throw stripeError;
+    }
+    
+    console.log('[PAYMENT] Stripe session created:', { sessionId: session.id, hasUrl: !!session.url });
     res.json({ sessionId: session.id, url: session.url });
   } catch (error) {
     console.error('Checkout error:', error);
@@ -328,7 +359,7 @@ app.use(express.static(distPath));
 
 // Serve index.html for all other routes (SPA fallback)
 // Only serve index.html for routes that don't have a file extension (to avoid overriding static assets)
-app.get('*', (req, res, next) => {
+app.get('/{*splat}', (req, res, next) => {
   // Skip /api routes - they should be handled by specific routes above
   if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) {
     return next();
@@ -347,12 +378,15 @@ app.get('*', (req, res, next) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log('Server running on http://localhost:' + PORT);
-  console.log('API endpoints:');
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n✅ Server running on http://localhost:${PORT}`);
+  console.log('\n📡 API endpoints:');
   console.log('  POST /api/payment/checkout');
   console.log('  POST /api/payment/notify/stripe');
   console.log('  GET  /api/payment/callback');
   console.log('  GET  /auth/callback (Supabase OAuth)');
+  console.log('\n💡 For development, run:');
+  console.log('   Terminal 1: npm run dev     (Vite on port 5173)');
+  console.log('   Terminal 2: npm run server  (API server on port 3001)\n');
 });

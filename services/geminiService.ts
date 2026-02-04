@@ -1,12 +1,12 @@
 import { GoogleGenAI } from "@google/genai";
 import { logger } from '../utils/logger';
 
-const apiKey = process.env.API_KEY || '';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
 export const generateChatResponse = async (userMessage: string): Promise<string> => {
   if (!apiKey) {
-    return "Demo Mode: API Key is missing. Please configure process.env.API_KEY to chat with the assistant.";
+    return "Demo Mode: API Key is missing. Please configure VITE_GEMINI_API_KEY to chat with the assistant.";
   }
 
   try {

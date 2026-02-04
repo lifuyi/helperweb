@@ -1,32 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { CheckCircle, Download, Mail, ArrowLeft } from 'lucide-react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 
 export const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get('session_id');
   const product = searchParams.get('product');
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Verify session with backend
-    const verifySession = async () => {
-      try {
-        const response = await fetch(`/api/payment/verify?sid=${sessionId}`);
-        if (response.ok) {
-          setIsLoading(false);
-        }
-      } catch {
-        setIsLoading(false);
-      }
-    };
-
-    if (sessionId) {
-      verifySession();
-    } else {
-      setIsLoading(false);
-    }
-  }, [sessionId]);
 
   const productNames: Record<string, string> = {
     'vpn-3days': 'VPN 3-Day Pass',
@@ -35,17 +14,6 @@ export const PaymentSuccess: React.FC = () => {
     'vpn-30days': 'VPN Monthly Pass',
     'payment-guide': 'Payment Guide PDF',
   };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-chinaRed mx-auto mb-4"></div>
-          <p className="text-slate-600">Verifying your payment...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-slate-50 pt-24 pb-20">

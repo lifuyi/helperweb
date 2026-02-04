@@ -1,11 +1,11 @@
 /**
  * VPN Client Service
- * Creates X-UI VPN clients with expiration
+ * Creates X-UI VPN clients with expiration and stores VLESS URLs
  */
 
 import { createClient } from '@supabase/supabase-js';
 import { XuiApiClient } from './xuiClient';
-import { generateVlessUrlFromXui } from '../utils/vlessGenerator';
+import { generateVlessUrlFromXui, parseVlessUrl } from '../utils/vlessGenerator';
 import { sendVpnCredentialsEmail } from '../api/email/send/vpn';
 import { logger } from '../utils/logger';
 import { getExpiryDaysForProduct } from '../config/products';
@@ -30,6 +30,12 @@ export interface VpnClientRecord {
   status: string;
   is_active: boolean;
   created_at: string;
+  day_period?: number;
+  traffic_limit?: number;
+  vless_uuid?: string;
+  vless_host?: string;
+  vless_port?: number;
+  security_type?: string;
 }
 
 export interface CreateVpnClientRequest {
@@ -67,31 +73,44 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
 
     const inboundHost = process.env.VPN_SERVER_HOST || 'vpn.example.com';
     const inboundPort = parseInt(process.env.VPN_SERVER_PORT || '443');
+    const security = process.env.VPN_SECURITY || 'reality';
+    const sni = process.env.VPN_SNI || 'example.com';
+    
     const vlessUrl = generateVlessUrlFromXui(
       inboundHost,
       inboundPort,
       xuiResult.uuid,
       email,
       {
-        security: process.env.VPN_SECURITY || 'reality',
-        sni: process.env.VPN_SNI,
+        security,
+        sni,
         fp: 'chrome',
       }
     );
 
+    // Parse VLESS URL to extract components
+    const parsedUrl = parseVlessUrl(vlessUrl);
+
     const { data: vpnClient, error: dbError } = await supabase
-      ?.from('vpn_clients')
+      ?.from('vpn_urls')
       .insert({
         user_id: userId,
-        xui_client_uuid: xuiResult.uuid,
-        xui_inbound_id: xuiResult.inboundId,
-        email: email,
         vless_url: vlessUrl,
+        vless_uuid: xuiResult.uuid,
+        vless_host: inboundHost,
+        vless_port: inboundPort,
         product_id: productId,
-        expiry_days: expiryDays,
-        expires_at: expiresAt.toISOString(),
+        day_period: expiryDays,
+        traffic_limit: 0, // Unlimited by default
+        protocol: 'tcp',
+        encryption: 'none',
+        security_type: security,
+        fingerprint: 'chrome',
+        sni: sni,
+        vless_name: email,
         status: 'active',
         is_active: true,
+        expires_at: expiresAt.toISOString(),
       })
       .select()
       .single();
@@ -203,7 +222,7 @@ export async function getUserVpnClient(
 
   try {
     const { data, error } = await supabase
-      .from('vpn_clients')
+      .from('vpn_urls')
       .select('*')
       .eq('user_id', userId)
       .eq('product_id', productId)
@@ -222,7 +241,7 @@ export async function getUserVpnClients(userId: string): Promise<VpnClientRecord
 
   try {
     const { data } = await supabase
-      .from('vpn_clients')
+      .from('vpn_urls')
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -239,7 +258,7 @@ export async function getUserVpnClientsFromTable(userId: string): Promise<VpnCli
 
   try {
     const { data, error } = await supabase
-      .from('vpn_clients')
+      .from('vpn_urls')
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
@@ -260,7 +279,7 @@ export async function getUserVpnClientsFromTable(userId: string): Promise<VpnCli
 export async function revokeVpnClient(clientId: string): Promise<{ success: boolean }> {
   try {
     const { data: client } = await supabase
-      ?.from('vpn_clients')
+      ?.from('vpn_urls')
       .select('*')
       .eq('id', clientId)
       .maybeSingle();
@@ -269,15 +288,15 @@ export async function revokeVpnClient(clientId: string): Promise<{ success: bool
 
     try {
       const xui = await createDefaultXuiClient();
-      if (xui) {
-        await xui.toggleClient(client.xui_inbound_id, client.xui_client_uuid, false);
+      if (xui && client.xui_inbound_id && client.vless_uuid) {
+        await xui.deleteClient(client.xui_inbound_id, client.vless_uuid);
       }
     } catch {
-      logger.warn('Failed to disable X-UI client');
+      logger.warn('Failed to delete X-UI client');
     }
 
     await supabase
-      ?.from('vpn_clients')
+      ?.from('vpn_urls')
       .update({ is_active: false, status: 'revoked' })
       .eq('id', clientId);
 
