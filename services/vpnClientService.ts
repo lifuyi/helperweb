@@ -234,6 +234,29 @@ export async function getUserVpnClients(userId: string): Promise<VpnClientRecord
   }
 }
 
+export async function getUserVpnClientsFromTable(userId: string): Promise<VpnClientRecord[]> {
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase
+      .from('vpn_clients')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      logger.error('Error getting user VPN clients:', error);
+      return [];
+    }
+
+    return data || [];
+  } catch (error) {
+    logger.error('Error getting user VPN clients:', error);
+    return [];
+  }
+}
+
 export async function revokeVpnClient(clientId: string): Promise<{ success: boolean }> {
   try {
     const { data: client } = await supabase

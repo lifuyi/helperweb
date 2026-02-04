@@ -11,37 +11,31 @@ import {
   AlertCircle,
   Loader,
 } from 'lucide-react';
-import { getUserAssignedVpnUrls } from '../services/adminService';
+import { getUserVpnClientsFromTable } from '../services/vpnClientService';
 
-interface VpnUrl {
+interface VpnClient {
   id: string;
-  url: string;
-  day_period: number;
-  traffic_limit: number;
+  vless_url: string;
+  expiry_days: number;
   status: string;
-  assigned_at: string;
-  vless_host?: string;
-  vless_port?: number;
-  security_type?: string;
-  vless_name?: string;
-  sni?: string;
-  fingerprint?: string;
-  traffic_used?: number;
-  expiry_date?: string;
+  created_at: string;
+  expires_at: string;
+  email: string;
+  product_id: string;
 }
 
 export const UserVpnCenter: React.FC = () => {
-  const [vpnUrls, setVpnUrls] = useState<VpnUrl[]>([]);
+  const [vpnClients, setVpnClients] = useState<VpnClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUrls, setShowUrls] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUserVpnUrls();
+    loadUserVpnClients();
   }, []);
 
-  const loadUserVpnUrls = async () => {
+  const loadUserVpnClients = async () => {
     try {
       setIsLoading(true);
       // Get current user ID from Supabase auth
@@ -52,24 +46,14 @@ export const UserVpnCenter: React.FC = () => {
 
       if (!user) {
         logger.warn('No authenticated user');
-        setVpnUrls([]);
+        setVpnClients([]);
         return;
       }
 
-      const urls = await getUserAssignedVpnUrls(user.id);
-      
-      // Calculate expiry dates
-      const urlsWithExpiry = urls.map((url) => ({
-        ...url,
-        expiry_date: new Date(
-          new Date(url.assigned_at).getTime() +
-            url.day_period * 24 * 60 * 60 * 1000
-        ).toLocaleDateString(),
-      }));
-
-      setVpnUrls(urlsWithExpiry);
+      const clients = await getUserVpnClientsFromTable(user.id);
+      setVpnClients(clients);
     } catch (err) {
-      logger.error('Error loading VPN URLs:', err);
+      logger.error('Error loading VPN clients:', err);
     } finally {
       setIsLoading(false);
     }
@@ -81,34 +65,6 @@ export const UserVpnCenter: React.FC = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const downloadAsQrCode = (url: string) => {
-    // This would typically generate a QR code image
-    // For now, we'll just offer the URL as text file
-    const element = document.createElement('a');
-    element.setAttribute(
-      'href',
-      'data:text/plain;charset=utf-8,' + encodeURIComponent(url)
-    );
-    element.setAttribute('download', 'vpn_url.txt');
-    element.style.display = 'none';
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
-
-  const formatTrafficLimit = (bytes: number): string => {
-    if (bytes >= 1024 * 1024 * 1024) {
-      return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-    }
-    if (bytes >= 1024 * 1024) {
-      return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-    }
-    if (bytes >= 1024) {
-      return `${(bytes / 1024).toFixed(2)} KB`;
-    }
-    return `${bytes} B`;
-  };
-
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -117,14 +73,9 @@ export const UserVpnCenter: React.FC = () => {
     });
   };
 
-  const maskUrl = (url: string): string => {
-    if (url.length <= 20) return url;
-    return url.substring(0, 10) + '...' + url.substring(url.length - 10);
-  };
-
-  const getDaysRemaining = (assignedAt: string, dayPeriod: number): number => {
+  const getDaysRemaining = (createdAt: string, expiryDays: number): number => {
     const expiryDate = new Date(
-      new Date(assignedAt).getTime() + dayPeriod * 24 * 60 * 60 * 1000
+      new Date(createdAt).getTime() + expiryDays * 24 * 60 * 60 * 1000
     );
     const now = new Date();
     const diffTime = expiryDate.getTime() - now.getTime();
@@ -165,18 +116,18 @@ export const UserVpnCenter: React.FC = () => {
         <div className="flex items-center justify-center py-12">
           <Loader className="w-8 h-8 text-chinaRed animate-spin" />
         </div>
-      ) : vpnUrls.length === 0 ? (
+      ) : vpnClients.length === 0 ? (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
           <AlertCircle className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-          <p className="text-blue-900 font-semibold">No VPN URLs Yet</p>
+          <p className="text-blue-900 font-semibold">No VPN Clients Yet</p>
           <p className="text-blue-800 text-sm mt-2">
             Purchase a VPN package to get your VPN configuration.
           </p>
         </div>
       ) : (
         <div className="grid gap-4">
-          {vpnUrls.map((vpn) => {
-            const daysRemaining = getDaysRemaining(vpn.assigned_at, vpn.day_period);
+          {vpnClients.map((vpn) => {
+            const daysRemaining = getDaysRemaining(vpn.created_at, vpn.expiry_days);
             const isExpiring = daysRemaining <= 3;
             const isExpired = daysRemaining <= 0;
 
@@ -196,7 +147,7 @@ export const UserVpnCenter: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
                       <h3 className="font-semibold text-slate-900">
-                        {vpn.vless_name || `VPN Configuration`}
+                        {vpn.product_id.replace('vpn-', '').replace('days', ' Day VPN')}
                       </h3>
                       {isExpired && (
                         <span className="px-2 py-1 bg-red-200 text-red-800 text-xs font-semibold rounded">
@@ -210,7 +161,7 @@ export const UserVpnCenter: React.FC = () => {
                       )}
                     </div>
                     <p className="text-sm text-slate-600 mt-1">
-                      Added {formatDate(vpn.assigned_at)}
+                      Created {formatDate(vpn.created_at)}
                     </p>
                   </div>
                   <button
@@ -232,15 +183,15 @@ export const UserVpnCenter: React.FC = () => {
                     </p>
                   </div>
                   <div className="bg-slate-100 rounded p-3">
-                    <p className="text-xs text-slate-600">Traffic Limit</p>
+                    <p className="text-xs text-slate-600">Product</p>
                     <p className="text-sm font-semibold text-slate-900">
-                      {formatTrafficLimit(vpn.traffic_limit)}
+                      {vpn.product_id}
                     </p>
                   </div>
                   <div className="bg-slate-100 rounded p-3">
-                    <p className="text-xs text-slate-600">Connection Type</p>
+                    <p className="text-xs text-slate-600">Status</p>
                     <p className="text-sm font-semibold text-slate-900">
-                      {vpn.security_type || 'VLESS'}
+                      {vpn.status}
                     </p>
                   </div>
                 </div>
@@ -252,10 +203,10 @@ export const UserVpnCenter: React.FC = () => {
                       <p className="text-xs text-slate-600 mb-2">VPN Address</p>
                       <div className="flex items-center space-x-2">
                         <code className="flex-1 text-xs font-mono text-slate-900 break-all bg-white p-2 rounded border border-slate-300">
-                          {vpn.url}
+                          {vpn.vless_url}
                         </code>
                         <button
-                          onClick={() => copyToClipboard(vpn.url, vpn.id)}
+                          onClick={() => copyToClipboard(vpn.vless_url, vpn.id)}
                           className="p-2 text-slate-600 hover:bg-white rounded transition-colors"
                         >
                           {copiedId === vpn.id ? (
@@ -266,69 +217,24 @@ export const UserVpnCenter: React.FC = () => {
                         </button>
                       </div>
                     </div>
-
-                    {/* Details */}
-                    {expandedId === vpn.id && (
-                      <div className="space-y-2 p-3 bg-slate-50 rounded border border-slate-200">
-                        {vpn.vless_host && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-600">Host:</span>
-                            <span className="font-mono text-slate-900">
-                              {vpn.vless_host}
-                            </span>
-                          </div>
-                        )}
-                        {vpn.vless_port && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-600">Port:</span>
-                            <span className="font-mono text-slate-900">
-                              {vpn.vless_port}
-                            </span>
-                          </div>
-                        )}
-                        {vpn.sni && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-600">SNI:</span>
-                            <span className="font-mono text-slate-900">
-                              {vpn.sni}
-                            </span>
-                          </div>
-                        )}
-                        {vpn.fingerprint && (
-                          <div className="flex justify-between text-xs">
-                            <span className="text-slate-600">Fingerprint:</span>
-                            <span className="font-mono text-slate-900">
-                              {vpn.fingerprint}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )}
 
                 {/* Actions */}
                 <div className="flex gap-2">
                   <button
-                    onClick={() => copyToClipboard(vpn.url, vpn.id)}
+                    onClick={() => copyToClipboard(vpn.vless_url, vpn.id)}
                     className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-chinaRed text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
                   >
                     <Copy className="w-4 h-4" />
                     <span>{copiedId === vpn.id ? 'Copied!' : 'Copy URL'}</span>
-                  </button>
-                  <button
-                    onClick={() => downloadAsQrCode(vpn.url)}
-                    className="flex items-center justify-center space-x-2 px-3 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download</span>
                   </button>
                 </div>
               </div>
             );
           })}
         </div>
-      )}
+      )
 
       {/* Info Box */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
