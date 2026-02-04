@@ -1,9 +1,12 @@
 import Stripe from 'stripe';
+import { createVpnClient } from '../../../services/vpnClientService';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
+  timeout: 30000,
 });
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
@@ -17,14 +20,46 @@ export async function handleStripeWebhook(event: PaymentEvent) {
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object as unknown as Stripe.Checkout.Session;
-      console.log(`Payment completed for ${session.metadata?.productId}`);
+      console.log('[WEBHOOK] checkout.session.completed received:', { 
+        sessionId: session.id, 
+        productId: session.metadata?.productId,
+        customerEmail: session.customer_email 
+      });
+
+      // Extract data from session
+      const userId = session.metadata?.userId;
+      const productId = session.metadata?.productId;
+      const customerEmail = session.customer_email;
+
+      if (!userId || !productId || !customerEmail) {
+        console.error('[WEBHOOK] Missing required metadata:', { userId, productId, customerEmail });
+        throw new Error('Missing required session metadata');
+      }
+
+      console.log('[WEBHOOK] Creating VPN client for purchase...');
+      const vpnResult = await createVpnClient({
+        userId,
+        email: customerEmail,
+        productId,
+        sessionId: session.id
+      });
+
+      if (vpnResult.success) {
+        console.log('[WEBHOOK] VPN client created successfully:', vpnResult.client?.id);
+      } else {
+        console.error('[WEBHOOK] Failed to create VPN client:', vpnResult.error);
+        throw new Error(`VPN creation failed: ${vpnResult.error}`);
+      }
+
       break;
     }
     case 'customer.subscription.deleted': {
       const subscription = event.data.object as unknown as Stripe.Subscription;
-      console.log(`Subscription canceled: ${subscription.id}`);
+      console.log('[WEBHOOK] Subscription canceled:', subscription.id);
       break;
     }
+    default:
+      console.log('[WEBHOOK] Unhandled event type:', event.type);
   }
   return { success: true };
 }
