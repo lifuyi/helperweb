@@ -67,10 +67,14 @@ export class XuiApiClient {
    */
   async login(): Promise<boolean> {
     try {
+      console.log('[X-UI] Attempting login to:', `${this.config.baseUrl}/login`);
+      
       const response = await fetch(`${this.config.baseUrl}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
+          'Accept': 'application/json, text/plain, */*',
+          'X-Requested-With': 'XMLHttpRequest',
         },
         body: new URLSearchParams({
           username: this.config.username,
@@ -78,24 +82,35 @@ export class XuiApiClient {
         }),
       });
 
+      console.log('[X-UI] Login response status:', response.status, response.statusText);
+
       if (!response.ok) {
+        const errorText = await response.text().catch(() => 'No error body');
         logger.error('X-UI login failed:', response.statusText);
+        console.error('[X-UI] Login error body:', errorText);
         return false;
       }
 
       // Extract cookie from response headers
       const setCookie = response.headers.get('set-cookie');
+      console.log('[X-UI] Set-Cookie header:', setCookie ? 'Present' : 'Missing');
+      
       if (setCookie) {
         // Extract session cookie (usually the first part before semicolon)
         this.cookie = setCookie.split(';')[0];
+        console.log('[X-UI] Cookie extracted:', this.cookie.substring(0, 20) + '...');
         logger.log('X-UI login successful');
         return true;
       }
 
+      const responseText = await response.text();
+      console.log('[X-UI] Login response body preview:', responseText.substring(0, 200));
+      
       logger.error('No cookie in X-UI login response');
       return false;
     } catch (error) {
       logger.error('X-UI login error:', error);
+      console.error('[X-UI] Login exception:', error);
       return false;
     }
   }
