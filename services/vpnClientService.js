@@ -666,14 +666,13 @@ async function createVpnClient(request) {
     }
     console.log("[VPN] No existing client, proceeding with creation");
     console.log("[VPN] Calling createXuiClientWithExpiration");
-    const xuiResult = await createXuiClientWithExpiration(email, expiryDays);
+    const xuiResult = await createXuiClientWithExpiration(email, 0);
     if (!xuiResult) {
       console.error("[VPN] X-UI client creation returned null");
       return { success: false, error: "Failed to create X-UI client" };
     }
     console.log("[VPN] X-UI client created:", xuiResult);
-    const expiresAt = /* @__PURE__ */ new Date();
-    expiresAt.setDate(expiresAt.getDate() + expiryDays);
+    const expiresAt = null;
     const inboundHost = process.env.VPN_SERVER_HOST || "vpn.example.com";
     const inboundPort = parseInt(process.env.VPN_SERVER_PORT || "443");
     const security = process.env.VPN_SECURITY || "reality";
@@ -709,7 +708,7 @@ async function createVpnClient(request) {
       vless_name: email,
       status: "active",
       is_active: true,
-      expires_at: expiresAt.toISOString()
+      expires_at: expiresAt
     }).select().single();
     if (dbError || !vpnClient) {
       logger.error("Failed to save VPN client:", dbError);
