@@ -2,16 +2,21 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../utils/logger.js';
 import { sessionManager } from '../utils/sessionManager.js';
 
-// 客户端初始化 - 用于浏览器端
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+declare const __SUPABASE_URL__: string;
+declare const __SUPABASE_ANON_KEY__: string;
+
+const supabaseUrl = (typeof __SUPABASE_URL__ !== 'undefined' ? __SUPABASE_URL__ : '') || (import.meta as any).env?.VITE_SUPABASE_URL || '';
+const supabaseAnonKey = (typeof __SUPABASE_ANON_KEY__ !== 'undefined' ? __SUPABASE_ANON_KEY__ : '') || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+
+console.log('[Supabase] Config check:', { url: supabaseUrl ? 'Set' : 'Missing', key: supabaseAnonKey ? 'Set' : 'Missing' });
 
 let supabaseInstance: SupabaseClient | null = null;
 
 if (supabaseUrl && supabaseAnonKey) {
   supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+  console.log('[Supabase] Client initialized successfully');
 } else {
-  console.error('[Supabase] Missing configuration. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+  console.error('[Supabase] Missing configuration. URL:', supabaseUrl, 'Key:', supabaseAnonKey ? 'Present' : 'Missing');
 }
 
 export const supabase = supabaseInstance!;
