@@ -24074,7 +24074,7 @@ var XuiApiClient = class {
    * Get list of inbounds (protocols/ports)
    */
   async getInbounds() {
-    const response = await this.request("/panel/api/inbounds");
+    const response = await this.request("/panel/api/inbounds/list");
     return response?.obj || [];
   }
   /**

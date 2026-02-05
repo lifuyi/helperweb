@@ -152,7 +152,7 @@ export class XuiApiClient {
    * Get list of inbounds (protocols/ports)
    */
   async getInbounds(): Promise<XuiInbound[]> {
-    const response = await this.request<XuiResponse<XuiInbound[]>>('/panel/api/inbounds');
+    const response = await this.request<XuiResponse<XuiInbound[]>>('/panel/api/inbounds/list');
     return response?.obj || [];
   }
 
