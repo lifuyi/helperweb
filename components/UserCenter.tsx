@@ -257,7 +257,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
             <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">
               Active URLs
             </p>
-            <p className="text-lg font-bold text-chinaRed">{vpnTokens.length}</p>
+            <p className="text-lg font-bold text-chinaRed">{order.vpn_urls?.length || 0}</p>
           </div>
         </div>
       </div>
