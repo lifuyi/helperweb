@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [react()],
     define: {
-      // Only expose public keys (VITE_ prefix)
-      // NEVER expose server-only secrets like STRIPE_SECRET_KEY, SUPABASE_SERVICE_ROLE_KEY
+      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL || env.SUPABASE_URL || ''),
+      'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY || ''),
     },
     resolve: {
       extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.json'],
