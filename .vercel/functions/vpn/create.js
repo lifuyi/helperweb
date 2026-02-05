@@ -24301,6 +24301,57 @@ function generateVlessUrlFromXui(inboundHost, inboundPort, clientUuid, clientEma
     remark: clientEmail
   });
 }
+function parseVlessUrl(urlString) {
+  try {
+    if (!urlString.startsWith("vless://")) {
+      logger.error("Invalid VLESS URL: must start with vless://");
+      return null;
+    }
+    let remainder = urlString.slice(8);
+    let remark;
+    if (remainder.includes("#")) {
+      const parts = remainder.split("#");
+      remainder = parts[0];
+      remark = decodeURIComponent(parts[1]);
+    }
+    let authority;
+    let query;
+    if (remainder.includes("?")) {
+      const parts = remainder.split("?");
+      authority = parts[0];
+      query = parts[1];
+    } else {
+      authority = remainder;
+      query = "";
+    }
+    const authorityMatch = authority.match(/^([^@]+)@([^:]+):(\d+)$/);
+    if (!authorityMatch) {
+      logger.error("Invalid VLESS authority format:", authority);
+      return null;
+    }
+    const uuid = authorityMatch[1];
+    const host = authorityMatch[2];
+    const port = parseInt(authorityMatch[3], 10);
+    const params = new URLSearchParams(query);
+    return {
+      uuid,
+      host,
+      port,
+      type: params.get("type") || "tcp",
+      encryption: params.get("encryption") || "none",
+      security: params.get("security") || "none",
+      pb: params.get("pb") || void 0,
+      fp: params.get("fp") || void 0,
+      sni: params.get("sni") || void 0,
+      sid: params.get("sid") || void 0,
+      spx: params.get("spx") || void 0,
+      remark
+    };
+  } catch (error) {
+    logger.error("Error parsing VLESS URL:", error);
+    return null;
+  }
+}
 
 // api/email/send/vpn.ts
 var import_nodemailer = __toESM(require_nodemailer(), 1);
@@ -24568,44 +24619,64 @@ var supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, sup
 async function createVpnClient(request) {
   const { userId, email, productId, sessionId } = request;
   try {
+    console.log("[VPN] createVpnClient called:", { userId, email, productId, sessionId });
     const expiryDays = getExpiryDaysForProduct(productId);
+    console.log("[VPN] Product expiry days:", { productId, expiryDays });
     if (expiryDays <= 0) {
+      console.error("[VPN] Invalid expiry days:", expiryDays);
       return { success: false, error: "Invalid product" };
     }
+    console.log("[VPN] Checking for existing VPN client");
     const existing = await getUserVpnClient(userId, productId);
     if (existing) {
+      console.log("[VPN] VPN client already exists for this product");
       return { success: false, error: "VPN client already exists for this product" };
     }
+    console.log("[VPN] No existing client, proceeding with creation");
+    console.log("[VPN] Calling createXuiClientWithExpiration");
     const xuiResult = await createXuiClientWithExpiration(email, expiryDays);
     if (!xuiResult) {
+      console.error("[VPN] X-UI client creation returned null");
       return { success: false, error: "Failed to create X-UI client" };
     }
+    console.log("[VPN] X-UI client created:", xuiResult);
     const expiresAt = /* @__PURE__ */ new Date();
     expiresAt.setDate(expiresAt.getDate() + expiryDays);
     const inboundHost = process.env.VPN_SERVER_HOST || "vpn.example.com";
     const inboundPort = parseInt(process.env.VPN_SERVER_PORT || "443");
+    const security = process.env.VPN_SECURITY || "reality";
+    const sni = process.env.VPN_SNI || "example.com";
     const vlessUrl = generateVlessUrlFromXui(
       inboundHost,
       inboundPort,
       xuiResult.uuid,
       email,
       {
-        security: process.env.VPN_SECURITY || "reality",
-        sni: process.env.VPN_SNI,
+        security,
+        sni,
         fp: "chrome"
       }
     );
-    const { data: vpnClient, error: dbError } = await supabase?.from("vpn_clients").insert({
+    const parsedUrl = parseVlessUrl(vlessUrl);
+    const { data: vpnClient, error: dbError } = await supabase?.from("vpn_urls").insert({
       user_id: userId,
-      xui_client_uuid: xuiResult.uuid,
-      xui_inbound_id: xuiResult.inboundId,
-      email,
       vless_url: vlessUrl,
+      vless_uuid: xuiResult.uuid,
+      vless_host: inboundHost,
+      vless_port: inboundPort,
       product_id: productId,
-      expiry_days: expiryDays,
-      expires_at: expiresAt.toISOString(),
+      day_period: expiryDays,
+      traffic_limit: 0,
+      // Unlimited by default
+      protocol: "tcp",
+      encryption: "none",
+      security_type: security,
+      fingerprint: "chrome",
+      sni,
+      vless_name: email,
       status: "active",
-      is_active: true
+      is_active: true,
+      expires_at: expiresAt.toISOString()
     }).select().single();
     if (dbError || !vpnClient) {
       logger.error("Failed to save VPN client:", dbError);
@@ -24638,21 +24709,36 @@ async function createVpnClient(request) {
 }
 async function createXuiClientWithExpiration(email, expiryDays) {
   try {
+    console.log("[VPN] Starting X-UI client creation for email:", email);
     const xui = await createDefaultXuiClient();
-    if (!xui) return null;
+    if (!xui) {
+      console.error("[VPN] Failed to create X-UI client instance");
+      logger.error("Failed to create X-UI API client");
+      return null;
+    }
+    console.log("[VPN] X-UI client instance created successfully");
+    console.log("[VPN] Fetching inbounds from X-UI");
     const inbounds = await xui.getInbounds();
+    console.log("[VPN] Inbounds fetched:", inbounds.length, "inbound(s) available");
     if (inbounds.length === 0) {
+      console.error("[VPN] No inbounds available in X-UI");
       logger.error("No inbounds available");
       return null;
     }
     const inbound = inbounds[0];
+    console.log("[VPN] Using inbound:", { id: inbound.id, port: inbound.port, protocol: inbound.protocol });
+    console.log("[VPN] Creating client with expiry:", expiryDays, "days");
     const created = await xui.createClient(inbound.id, email, expiryDays, 1);
+    console.log("[VPN] Client creation response:", created);
     if (!created) {
+      console.error("[VPN] Client creation returned null/false");
       logger.error("Failed to create X-UI client");
       return null;
     }
+    console.log("[VPN] X-UI client created successfully:", { uuid: created.uuid, inboundId: inbound.id });
     return { uuid: created.uuid, inboundId: inbound.id };
   } catch (error) {
+    console.error("[VPN] Error creating X-UI client:", error);
     logger.error("Error creating X-UI client:", error);
     return null;
   }
@@ -24690,7 +24776,7 @@ async function cleanupXuiClient(inboundId, clientUuid) {
 async function getUserVpnClient(userId, productId) {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase.from("vpn_clients").select("*").eq("user_id", userId).eq("product_id", productId).eq("is_active", true).maybeSingle();
+    const { data, error } = await supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("product_id", productId).eq("is_active", true).maybeSingle();
     if (error) return null;
     return data;
   } catch {

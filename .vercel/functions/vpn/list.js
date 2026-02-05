@@ -24078,7 +24078,7 @@ var supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, sup
 async function getUserVpnClients(userId) {
   if (!supabase) return [];
   try {
-    const { data } = await supabase.from("vpn_clients").select("*").eq("user_id", userId).eq("is_active", true).order("created_at", { ascending: false });
+    const { data } = await supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("is_active", true).not("vless_uuid", "is", null).order("created_at", { ascending: false });
     return data || [];
   } catch {
     return [];

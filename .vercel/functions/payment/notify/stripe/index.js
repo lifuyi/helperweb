@@ -1,22 +1,31 @@
 // api/payment/notify/stripe/index.ts
 import Stripe from "stripe";
 var runtime = "nodejs";
+var maxDuration = 60;
 var stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16"
+  apiVersion: "2023-10-16",
+  timeout: 3e4
 });
 var webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 async function handleStripeWebhook(event) {
   switch (event.type) {
     case "checkout.session.completed": {
       const session = event.data.object;
-      console.log(`Payment completed for ${session.metadata?.productId}`);
+      console.log("[WEBHOOK] checkout.session.completed received:", {
+        sessionId: session.id,
+        productId: session.metadata?.productId,
+        customerEmail: session.customer_email
+      });
+      console.log("[WEBHOOK] Payment verified, VPN creation will be handled by callback");
       break;
     }
     case "customer.subscription.deleted": {
       const subscription = event.data.object;
-      console.log(`Subscription canceled: ${subscription.id}`);
+      console.log("[WEBHOOK] Subscription canceled:", subscription.id);
       break;
     }
+    default:
+      console.log("[WEBHOOK] Unhandled event type:", event.type);
   }
   return { success: true };
 }
@@ -46,5 +55,6 @@ async function POST(request) {
 export {
   POST,
   handleStripeWebhook,
+  maxDuration,
   runtime
 };
