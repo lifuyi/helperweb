@@ -1,5 +1,5 @@
-import { supabase } from './supabaseService';
-import { logger } from '../utils/logger';
+import { supabase } from './supabaseService.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * 用户接口定义

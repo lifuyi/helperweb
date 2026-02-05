@@ -1,7 +1,7 @@
-import { supabase } from './supabaseService';
-import { Purchase } from './paymentService';
-import { AccessToken } from './userService';
-import { logger } from '../utils/logger';
+import { supabase } from './supabaseService.js';
+import { Purchase } from './paymentService.js';
+import { AccessToken } from './userService.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Order details interface combining purchase and access token info

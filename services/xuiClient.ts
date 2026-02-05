@@ -3,7 +3,7 @@
  * Handles communication with X-UI panel to create and manage VPN clients
  */
 
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 /**
  * X-UI Configuration

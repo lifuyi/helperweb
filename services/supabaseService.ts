@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
-import { logger } from '../utils/logger';
-import { sessionManager } from '../utils/sessionManager';
+import { logger } from '../utils/logger.js';
+import { sessionManager } from '../utils/sessionManager.js';
 
 // 客户端初始化 - 用于浏览器端
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;

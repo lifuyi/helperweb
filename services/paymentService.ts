@@ -1,8 +1,8 @@
-import { supabase } from './supabaseService';
-import { createAccessToken, generateAccessUrl, User } from './userService';
-import { logger } from '../utils/logger';
-import { getExpiryDaysForProduct, getProductName, getProductDescription } from '../config/products';
-import { getAvailableVpnUrl, assignVpnUrlToUserOnPurchase } from './adminService';
+import { supabase } from './supabaseService.js';
+import { createAccessToken, generateAccessUrl, User } from './userService.js';
+import { logger } from '../utils/logger.js';
+import { getExpiryDaysForProduct, getProductName, getProductDescription } from '../config/products.js';
+import { getAvailableVpnUrl, assignVpnUrlToUserOnPurchase } from './adminService.js';
 
 /**
  * 购买记录接口

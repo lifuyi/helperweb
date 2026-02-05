@@ -1,7 +1,7 @@
-import { supabase } from './supabaseService';
-import { Purchase } from './paymentService';
-import { logger } from '../utils/logger';
-import { parseVlessUrl } from '../utils/vlessParser';
+import { supabase } from './supabaseService.js';
+import { Purchase } from './paymentService.js';
+import { logger } from '../utils/logger.js';
+import { parseVlessUrl } from '../utils/vlessParser.js';
 
 /**
  * VPN URL Interface

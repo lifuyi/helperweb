@@ -4,11 +4,11 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { XuiApiClient } from './xuiClient';
-import { generateVlessUrlFromXui, parseVlessUrl } from '../utils/vlessGenerator';
-import { sendVpnCredentialsEmail } from '../api/email/send/vpn';
-import { logger } from '../utils/logger';
-import { getExpiryDaysForProduct } from '../config/products';
+import { XuiApiClient } from './xuiClient.js';
+import { generateVlessUrlFromXui, parseVlessUrl } from '../utils/vlessGenerator.js';
+import { sendVpnCredentialsEmail } from '../api/email/send/vpn.js';
+import { logger } from '../utils/logger.js';
+import { getExpiryDaysForProduct } from '../config/products.js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;

@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.js';
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
