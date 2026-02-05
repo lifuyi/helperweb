@@ -67,11 +67,16 @@ async function getUserOrders(userId) {
         }
         let vpnUrls = [];
         if (purchase.product_id.startsWith("vpn-")) {
-          const { data: urls, error: urlError } = await supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("product_id", purchase.product_id).eq("is_active", true).order("created_at", { ascending: false });
-          if (urlError) {
-            logger.error("Error fetching VPN URLs for purchase:", urlError);
-          } else {
-            vpnUrls = urls || [];
+          try {
+            const response = await fetch(`/api/vpn/list?user_id=${userId}&product_id=${purchase.product_id}`);
+            if (response.ok) {
+              const data = await response.json();
+              vpnUrls = data.vpn_urls || [];
+            } else {
+              logger.error("Error fetching VPN URLs from API:", await response.text());
+            }
+          } catch (fetchError) {
+            logger.error("Error calling VPN list API:", fetchError);
           }
         }
         return {
