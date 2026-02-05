@@ -691,7 +691,7 @@ async function createVpnClient(request) {
     );
     const parsedUrl = parseVlessUrl(vlessUrl);
     const { data: vpnClient, error: dbError } = await supabase?.from("vpn_urls").insert({
-      user_id: userId,
+      assigned_to_user_id: userId,
       vless_url: vlessUrl,
       vless_uuid: xuiResult.uuid,
       vless_host: inboundHost,
@@ -808,7 +808,7 @@ async function cleanupXuiClient(inboundId, clientUuid) {
 async function getUserVpnClient(userId, productId) {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("product_id", productId).eq("is_active", true).maybeSingle();
+    const { data, error } = await supabase.from("vpn_urls").select("*").eq("assigned_to_user_id", userId).eq("product_id", productId).eq("is_active", true).maybeSingle();
     if (error) return null;
     return data;
   } catch {
@@ -818,7 +818,7 @@ async function getUserVpnClient(userId, productId) {
 async function getUserVpnClients(userId) {
   if (!supabase) return [];
   try {
-    const { data } = await supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("is_active", true).not("vless_uuid", "is", null).order("created_at", { ascending: false });
+    const { data } = await supabase.from("vpn_urls").select("*").eq("assigned_to_user_id", userId).eq("is_active", true).not("vless_uuid", "is", null).order("created_at", { ascending: false });
     return data || [];
   } catch {
     return [];
@@ -827,7 +827,7 @@ async function getUserVpnClients(userId) {
 async function getUserVpnClientsFromTable(userId) {
   if (!supabase) return [];
   try {
-    const { data, error } = await supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("is_active", true).not("vless_uuid", "is", null).order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("vpn_urls").select("*").eq("assigned_to_user_id", userId).eq("is_active", true).not("vless_uuid", "is", null).order("created_at", { ascending: false });
     if (error) {
       logger.error("Error getting user VPN clients:", error);
       return [];

@@ -105,7 +105,7 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
     const { data: vpnClient, error: dbError } = await supabase
       ?.from('vpn_urls')
       .insert({
-        user_id: userId,
+        assigned_to_user_id: userId,
         vless_url: vlessUrl,
         vless_uuid: xuiResult.uuid,
         vless_host: inboundHost,
@@ -253,7 +253,7 @@ export async function getUserVpnClient(
     const { data, error } = await supabase
       .from('vpn_urls')
       .select('*')
-      .eq('user_id', userId)
+      .eq('assigned_to_user_id', userId)
       .eq('product_id', productId)
       .eq('is_active', true)
       .maybeSingle();
@@ -272,7 +272,7 @@ export async function getUserVpnClients(userId: string): Promise<VpnClientRecord
     const { data } = await supabase
       .from('vpn_urls')
       .select('*')
-      .eq('user_id', userId)
+      .eq('assigned_to_user_id', userId)
       .eq('is_active', true)
       .not('vless_uuid', 'is', null)  // Only show newly created VLESS URLs (from purchases), not old imports
       .order('created_at', { ascending: false });
@@ -290,7 +290,7 @@ export async function getUserVpnClientsFromTable(userId: string): Promise<VpnCli
     const { data, error } = await supabase
       .from('vpn_urls')
       .select('*')
-      .eq('user_id', userId)
+      .eq('assigned_to_user_id', userId)
       .eq('is_active', true)
       .not('vless_uuid', 'is', null)  // Only show newly created VLESS URLs (from purchases), not old imports
       .order('created_at', { ascending: false });

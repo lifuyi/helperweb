@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     let query = supabase
       .from('vpn_urls')
       .select('*')
-      .eq('user_id', userId)
+      .eq('assigned_to_user_id', userId)
       .eq('is_active', true);
 
     // Optional product_id filter
