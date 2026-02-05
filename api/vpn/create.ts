@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createVpnClient } from '../../services/vpnClientService.js';
-import { logger } from '../../utils/logger';
+import { logger } from '../../utils/logger.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Only allow POST
