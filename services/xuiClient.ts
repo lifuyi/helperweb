@@ -111,12 +111,16 @@ export class XuiApiClient {
       const loggedIn = await this.login();
       if (!loggedIn) {
         logger.error('Not authenticated to X-UI');
+        console.error('[X-UI] Login failed, cannot make request');
         return null;
       }
     }
 
     try {
-      const response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+      const url = `${this.config.baseUrl}${endpoint}`;
+      console.log('[X-UI] Making request to:', url);
+      
+      const response = await fetch(url, {
         ...options,
         headers: {
           'Content-Type': 'application/json',
@@ -125,8 +129,11 @@ export class XuiApiClient {
         },
       });
 
+      console.log('[X-UI] Response status:', response.status, response.statusText);
+
       if (response.status === 401 || response.status === 403) {
         // Session expired, try to re-login
+        console.log('[X-UI] Session expired, re-logging in...');
         this.cookie = null;
         const loggedIn = await this.login();
         if (!loggedIn) {
@@ -137,13 +144,18 @@ export class XuiApiClient {
       }
 
       if (!response.ok) {
-        logger.error(`X-UI API error: ${response.statusText}`);
+        const errorText = await response.text();
+        logger.error(`X-UI API error: ${response.status} ${response.statusText}`);
+        console.error('[X-UI] Error response body:', errorText);
         return null;
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('[X-UI] Response data:', data);
+      return data;
     } catch (error) {
       logger.error(`X-UI API request failed:`, error);
+      console.error('[X-UI] Request error:', error);
       return null;
     }
   }
@@ -223,6 +235,9 @@ export class XuiApiClient {
       }),
     };
 
+    console.log('[X-UI] Creating client with data:', JSON.stringify(clientData, null, 2));
+    console.log('[X-UI] Endpoint:', `${this.config.baseUrl}/panel/api/inbounds/addClient`);
+
     const response = await this.request<XuiResponse<XuiClient>>(
       '/panel/api/inbounds/addClient',
       {
@@ -230,6 +245,8 @@ export class XuiApiClient {
         body: JSON.stringify(clientData),
       }
     );
+
+    console.log('[X-UI] Create client response:', response);
 
     if (response?.success) {
       logger.log(`X-UI client created: ${email}`);
@@ -245,7 +262,8 @@ export class XuiApiClient {
       };
     }
 
-    logger.error(`Failed to create X-UI client: ${response?.msg}`);
+    logger.error(`Failed to create X-UI client: ${response?.msg || 'Unknown error'}`);
+    console.error('[X-UI] Full response:', response);
     return null;
   }
 
