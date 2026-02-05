@@ -227,10 +227,9 @@ export class XuiApiClient {
     // Generate a unique UUID for the client
     const uuid = crypto.randomUUID();
 
-    // Calculate expiry timestamp
     const expiryTime = expiryDays > 0
-      ? Math.floor(Date.now() / 1000) + (expiryDays * 24 * 60 * 60)
-      : 0; // 0 means no expiry
+      ? Date.now() + (expiryDays * 24 * 60 * 60 * 1000)
+      : 0;
 
     const clientData = {
       id: inboundId,

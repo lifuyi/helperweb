@@ -139,7 +139,7 @@ var XuiApiClient = class {
    */
   async createClient(inboundId, email, expiryDays = 30, limitIp = 1) {
     const uuid = crypto.randomUUID();
-    const expiryTime = expiryDays > 0 ? Math.floor(Date.now() / 1e3) + expiryDays * 24 * 60 * 60 : 0;
+    const expiryTime = expiryDays > 0 ? Date.now() + expiryDays * 24 * 60 * 60 * 1e3 : 0;
     const clientData = {
       id: inboundId,
       settings: JSON.stringify({
@@ -199,7 +199,7 @@ var XuiApiClient = class {
    * Update client expiration
    */
   async updateClientExpiry(inboundId, clientUuid, expiryDays) {
-    const expiryTime = expiryDays > 0 ? Math.floor(Date.now() / 1e3) + expiryDays * 24 * 60 * 60 : 0;
+    const expiryTime = expiryDays > 0 ? Date.now() + expiryDays * 24 * 60 * 60 * 1e3 : 0;
     const inbound = await this.getInbound(inboundId);
     if (!inbound) {
       return false;
