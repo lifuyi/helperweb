@@ -672,7 +672,7 @@ async function createVpnClient(request) {
       return { success: false, error: "Failed to create X-UI client" };
     }
     console.log("[VPN] X-UI client created:", xuiResult);
-    const expiresAt = null;
+    const expiresAt = xuiResult.expiryTime > 0 ? new Date(xuiResult.expiryTime).toISOString() : null;
     const inboundHost = process.env.VPN_SERVER_HOST || "vpn.example.com";
     const inboundPort = parseInt(process.env.VPN_SERVER_PORT || "443");
     const security = process.env.VPN_SECURITY || "reality";
@@ -727,7 +727,7 @@ async function createVpnClient(request) {
         port: inboundPort,
         security: process.env.VPN_SECURITY || "reality"
       },
-      expiresAt: expiresAt.toISOString()
+      expiresAt: expiresAt
     });
     if (!emailSent) {
       logger.warn(`Failed to send VPN email to ${email}`);
@@ -768,7 +768,7 @@ async function createXuiClientWithExpiration(email, expiryDays) {
       return null;
     }
     console.log("[VPN] X-UI client created successfully:", { uuid: created.uuid, inboundId: inbound.id });
-    return { uuid: created.uuid, inboundId: inbound.id };
+    return { uuid: created.uuid, inboundId: inbound.id, expiryTime: created.expiryTime };
   } catch (error) {
     console.error("[VPN] Error creating X-UI client:", error);
     logger.error("Error creating X-UI client:", error);
