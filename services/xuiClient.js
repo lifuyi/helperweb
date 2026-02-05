@@ -142,7 +142,7 @@ var XuiApiClient = class {
     const subId = crypto.randomUUID().replace(/-/g, "").substring(0, 16);
     const now = new Date();
     const expiryDate = new Date(now);
-    expiryDate.setDate(expiryDate.getDate() + expiryDays + 1);
+    expiryDate.setDate(expiryDate.getDate() + expiryDays);
     expiryDate.setHours(23, 59, 59, 999);
     const expiryTime = expiryDays > 0 ? expiryDate.getTime() : 0;
     const settingsData = {
