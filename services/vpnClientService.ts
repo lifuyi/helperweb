@@ -50,6 +50,7 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
   client?: VpnClientRecord;
   error?: string;
   details?: string;
+  code?: string;
 }> {
   const { userId, email, productId, sessionId } = request;
 
@@ -133,10 +134,18 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
         code: dbError?.code,
         details: dbError?.details,
         hint: dbError?.hint,
+        userId,
+        productId,
+        xuiResult
       });
       logger.error('Failed to save VPN client:', dbError);
       await cleanupXuiClient(xuiResult.inboundId, xuiResult.uuid);
-      return { success: false, error: 'Failed to save VPN client', details: dbError?.message };
+      return { 
+        success: false, 
+        error: 'Failed to save VPN client', 
+        details: dbError?.message || 'Unknown database error',
+        code: dbError?.code
+      };
     }
 
     const emailSent = await sendVpnCredentialsEmail({
