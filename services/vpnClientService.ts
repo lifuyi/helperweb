@@ -74,7 +74,17 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
     }
     console.log('[VPN] X-UI client created:', xuiResult);
 
-    const expiresAt = xuiResult.expiryTime > 0 ? new Date(xuiResult.expiryTime).toISOString() : null;
+    // Use X-UI expiry time if available, otherwise calculate ourselves
+    let expiresAt: string | null = null;
+    if (xuiResult.expiryTime && xuiResult.expiryTime > 0) {
+      expiresAt = new Date(xuiResult.expiryTime).toISOString();
+    } else if (expiryDays > 0) {
+      // Fallback: calculate expiry time ourselves
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + expiryDays);
+      expiryDate.setHours(23, 59, 59, 999);
+      expiresAt = expiryDate.toISOString();
+    }
 
     const inboundHost = process.env.VPN_SERVER_HOST || 'vpn.example.com';
     const inboundPort = parseInt(process.env.VPN_SERVER_PORT || '443');
