@@ -1,4 +1,4 @@
-import { createDefaultXuiClient } from '../../services/xuiClient';
+import { createDefaultXuiClient } from '../../services/xuiClient.js';
 
 export const runtime = 'nodejs';
 
