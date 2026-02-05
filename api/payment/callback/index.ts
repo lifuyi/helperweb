@@ -15,7 +15,7 @@ function getSupabaseClient() {
   // Check both SUPABASE_URL and VITE_SUPABASE_URL (fallback for Vercel)
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
+
   console.log('Supabase config check:', {
     hasUrl: !!url,
     hasKey: !!key,
@@ -23,7 +23,7 @@ function getSupabaseClient() {
     keyLength: key?.length || 0,
     usedViteUrl: !process.env.SUPABASE_URL && !!process.env.VITE_SUPABASE_URL,
   });
-  
+
   if (!url || !key) {
     console.error('Missing Supabase configuration:', {
       hasUrl: !!url,
@@ -32,7 +32,7 @@ function getSupabaseClient() {
     });
     throw new Error('Supabase configuration missing in environment variables');
   }
-  
+
   return createClient(url, key);
 }
 
@@ -155,7 +155,7 @@ async function handlePaymentSuccess(
       expiryDays,
       expiresAt: expiresAt ? `Set to ${expiresAt}` : 'NULL (will be set on activation)',
     });
-    
+
     const { data: accessToken, error: tokenError } = await supabase
       .from('access_tokens')
       .insert({
@@ -200,7 +200,7 @@ async function handlePaymentSuccess(
           console.error('Could not get user email for VPN creation:', userError);
         } else {
           try {
-            const { createVpnClient } = await import('../../services/vpnClientService.js');
+            const { createVpnClient } = await import('../../../services/vpnClientService.js');
             const vpnResult = await createVpnClient({
               userId,
               email: userData.email,
@@ -296,7 +296,7 @@ export async function GET(request: Request) {
         console.error('No userId in session metadata');
         return Response.json({ error: 'No userId in session metadata' }, { status: 400 });
       }
-      
+
       if (!productId) {
         console.error('No productId in session metadata');
         return Response.json({ error: 'No productId in session metadata' }, { status: 400 });
@@ -324,7 +324,7 @@ export async function GET(request: Request) {
       console.log('Payment unpaid');
       return Response.json({ error: 'Payment unpaid' }, { status: 400 });
     }
-    
+
     console.log('Payment status:', session.payment_status);
     return Response.json({ error: 'Payment pending' }, { status: 400 });
   } catch (error) {

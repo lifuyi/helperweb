@@ -8,6 +8,7 @@ import { logger } from '../utils/logger';
  */
 export interface OrderDetails extends Purchase {
   access_tokens: AccessToken[];
+  vpn_urls: any[]; // VPN URLs from vpn_urls table
   product_name: string;
   status_display: string;
 }
@@ -36,7 +37,7 @@ export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
       return [];
     }
 
-    // For each purchase, fetch its access tokens
+    // For each purchase, fetch its access tokens and VPN URLs
     const ordersWithTokens = await Promise.all(
       purchases.map(async (purchase) => {
         const { data: tokens, error: tokenError } = await supabase
@@ -53,12 +54,32 @@ export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
             access_tokens: [],
             product_name: getProductName(purchase.product_id),
             status_display: getStatusDisplay(purchase.status),
+            vpn_urls: [], // Added for consistency
           };
+        }
+
+        // Also fetch VPN URLs for VPN products
+        let vpnUrls: any[] = [];
+        if (purchase.product_id.startsWith('vpn-')) {
+          const { data: urls, error: urlError } = await supabase
+            .from('vpn_urls')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('product_id', purchase.product_id)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+          if (urlError) {
+            logger.error('Error fetching VPN URLs for purchase:', urlError);
+          } else {
+            vpnUrls = urls || [];
+          }
         }
 
         return {
           ...purchase,
           access_tokens: tokens || [],
+          vpn_urls: vpnUrls,
           product_name: getProductName(purchase.product_id),
           status_display: getStatusDisplay(purchase.status),
         };

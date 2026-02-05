@@ -60,12 +60,24 @@ async function getUserOrders(userId) {
             ...purchase,
             access_tokens: [],
             product_name: getProductName(purchase.product_id),
-            status_display: getStatusDisplay(purchase.status)
+            status_display: getStatusDisplay(purchase.status),
+            vpn_urls: []
+            // Added for consistency
           };
+        }
+        let vpnUrls = [];
+        if (purchase.product_id.startsWith("vpn-")) {
+          const { data: urls, error: urlError } = await supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("product_id", purchase.product_id).eq("is_active", true).order("created_at", { ascending: false });
+          if (urlError) {
+            logger.error("Error fetching VPN URLs for purchase:", urlError);
+          } else {
+            vpnUrls = urls || [];
+          }
         }
         return {
           ...purchase,
           access_tokens: tokens || [],
+          vpn_urls: vpnUrls,
           product_name: getProductName(purchase.product_id),
           status_display: getStatusDisplay(purchase.status)
         };
