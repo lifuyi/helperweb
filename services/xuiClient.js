@@ -139,29 +139,43 @@ var XuiApiClient = class {
    */
   async createClient(inboundId, email, expiryDays = 30, limitIp = 1) {
     const uuid = crypto.randomUUID();
-    const expiryTime = expiryDays > 0 ? Date.now() + expiryDays * 24 * 60 * 60 * 1e3 : 0;
-    const clientData = {
-      id: inboundId,
-      settings: JSON.stringify({
-        clients: [
-          {
-            id: uuid,
-            email,
-            limitIp,
-            totalGB: 0,
-            expiryTime,
-            enable: true,
-            tgId: "",
-            subId: ""
-          }
-        ]
-      })
+    const subId = crypto.randomUUID().replace(/-/g, "").substring(0, 16);
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    const expiryTime = expiryDays > 0 ? tomorrow.getTime() + expiryDays * 24 * 60 * 60 * 1e3 + 23 * 60 * 60 * 1e3 + 59 * 60 * 1e3 : 0;
+    const settingsData = {
+      clients: [{
+        id: uuid,
+        flow: "",
+        email,
+        limitIp,
+        totalGB: 107374182400,
+        expiryTime,
+        enable: true,
+        tgId: "",
+        subId,
+        comment: "",
+        reset: 0
+      }]
     };
+    const formData = new URLSearchParams();
+    formData.append("id", inboundId.toString());
+    formData.append("settings", JSON.stringify(settingsData));
+    console.log("[X-UI] Creating client with form data:", {
+      id: inboundId,
+      settings: JSON.stringify(settingsData, null, 2)
+    });
+    console.log("[X-UI] Calculated expiry:", new Date(expiryTime).toISOString());
     const response = await this.request(
       "/panel/api/inbounds/addClient",
       {
         method: "POST",
-        body: JSON.stringify(clientData)
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: formData.toString()
       }
     );
     if (response?.success) {
@@ -172,9 +186,9 @@ var XuiApiClient = class {
         email,
         uuid,
         limitIp,
-        totalGB: 0,
+        totalGB: 100,
         expiryTime,
-        subId: ""
+        subId
       };
     }
     logger.error(`Failed to create X-UI client: ${response?.msg}`);

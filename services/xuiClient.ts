@@ -224,39 +224,52 @@ export class XuiApiClient {
     expiryDays: number = 30,
     limitIp: number = 1
   ): Promise<XuiClient | null> {
-    // Generate a unique UUID for the client
     const uuid = crypto.randomUUID();
+    const subId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
 
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
     const expiryTime = expiryDays > 0
-      ? Date.now() + (expiryDays * 24 * 60 * 60 * 1000)
+      ? tomorrow.getTime() + (expiryDays * 24 * 60 * 60 * 1000) + (23 * 60 * 60 * 1000) + (59 * 60 * 1000)
       : 0;
 
-    const clientData = {
-      id: inboundId,
-      settings: JSON.stringify({
-        clients: [
-          {
-            id: uuid,
-            email: email,
-            limitIp: limitIp,
-            totalGB: 0,
-            expiryTime: expiryTime,
-            enable: true,
-            tgId: '',
-            subId: '',
-          },
-        ],
-      }),
+    const settingsData = {
+      clients: [{
+        id: uuid,
+        flow: '',
+        email: email,
+        limitIp: limitIp,
+        totalGB: 107374182400,
+        expiryTime: expiryTime,
+        enable: true,
+        tgId: '',
+        subId: subId,
+        comment: '',
+        reset: 0,
+      }],
     };
 
-    console.log('[X-UI] Creating client with data:', JSON.stringify(clientData, null, 2));
-    console.log('[X-UI] Endpoint:', `${this.config.baseUrl}/panel/api/inbounds/addClient`);
+    const formData = new URLSearchParams();
+    formData.append('id', inboundId.toString());
+    formData.append('settings', JSON.stringify(settingsData));
+
+    console.log('[X-UI] Creating client with form data:', {
+      id: inboundId,
+      settings: JSON.stringify(settingsData, null, 2),
+    });
+    console.log('[X-UI] Calculated expiry:', new Date(expiryTime).toISOString());
 
     const response = await this.request<XuiResponse<XuiClient>>(
       '/panel/api/inbounds/addClient',
       {
         method: 'POST',
-        body: JSON.stringify(clientData),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData.toString(),
       }
     );
 
@@ -270,9 +283,9 @@ export class XuiApiClient {
         email,
         uuid,
         limitIp,
-        totalGB: 0,
+        totalGB: 100,
         expiryTime,
-        subId: '',
+        subId: subId,
       };
     }
 

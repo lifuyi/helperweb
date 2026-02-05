@@ -666,7 +666,7 @@ async function createVpnClient(request) {
     }
     console.log("[VPN] No existing client, proceeding with creation");
     console.log("[VPN] Calling createXuiClientWithExpiration");
-    const xuiResult = await createXuiClientWithExpiration(email, 0);
+    const xuiResult = await createXuiClientWithExpiration(email, expiryDays);
     if (!xuiResult) {
       console.error("[VPN] X-UI client creation returned null");
       return { success: false, error: "Failed to create X-UI client" };
