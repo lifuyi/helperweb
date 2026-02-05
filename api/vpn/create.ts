@@ -1,12 +1,5 @@
-/**
- * API Endpoint: Create VPN Client
- * POST /api/vpn/create
- * 
- * Creates a new VPN client when user purchases VPN
- */
-
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { createVpnClient } from '../../services/vpnClientService';
+import { createVpnClient } from '../../services/vpnClientService.js';
 import { logger } from '../../utils/logger';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
