@@ -1,5 +1,4 @@
 import Stripe from 'stripe';
-import { createVpnClient } from '../../../services/vpnClientService';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -26,30 +25,8 @@ export async function handleStripeWebhook(event: PaymentEvent) {
         customerEmail: session.customer_email 
       });
 
-      // Extract data from session
-      const userId = session.metadata?.userId;
-      const productId = session.metadata?.productId;
-      const customerEmail = session.customer_email;
-
-      if (!userId || !productId || !customerEmail) {
-        console.error('[WEBHOOK] Missing required metadata:', { userId, productId, customerEmail });
-        throw new Error('Missing required session metadata');
-      }
-
-      console.log('[WEBHOOK] Creating VPN client for purchase...');
-      const vpnResult = await createVpnClient({
-        userId,
-        email: customerEmail,
-        productId,
-        sessionId: session.id
-      });
-
-      if (vpnResult.success) {
-        console.log('[WEBHOOK] VPN client created successfully:', vpnResult.client?.id);
-      } else {
-        console.error('[WEBHOOK] Failed to create VPN client:', vpnResult.error);
-        throw new Error(`VPN creation failed: ${vpnResult.error}`);
-      }
+      // Log that webhook was received - actual VPN creation happens in callback
+      console.log('[WEBHOOK] Payment verified, VPN creation will be handled by callback');
 
       break;
     }
