@@ -65,14 +65,7 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
       return { success: false, error: 'Invalid product' };
     }
 
-    console.log('[VPN] Checking for existing VPN client');
-    const existing = await getUserVpnClient(userId, productId);
-    if (existing) {
-      console.log('[VPN] VPN client already exists for this product');
-      return { success: false, error: 'VPN client already exists for this product' };
-    }
-    console.log('[VPN] No existing client, proceeding with creation');
-
+    console.log('[VPN] Proceeding to create new VPN client');
     console.log('[VPN] Calling createXuiClientWithExpiration');
     const xuiResult = await createXuiClientWithExpiration(email, expiryDays);
     if (!xuiResult) {
