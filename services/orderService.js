@@ -73,10 +73,10 @@ async function getUserOrders(userId) {
               const data = await response.json();
               vpnUrls = data.vpn_urls || [];
             } else {
-              logger.error("Error fetching VPN URLs from API:", await response.text());
+              logger.log("VPN URLs not available for product:", purchase.product_id);
             }
           } catch (fetchError) {
-            logger.error("Error calling VPN list API:", fetchError);
+            logger.log("VPN list API not available");
           }
         }
         return {
