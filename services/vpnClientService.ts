@@ -108,6 +108,7 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
       ?.from('vpn_urls')
       .insert({
         assigned_to_user_id: userId,
+        url: vlessUrl,
         vless_url: vlessUrl,
         vless_uuid: xuiResult.uuid,
         vless_host: inboundHost,
