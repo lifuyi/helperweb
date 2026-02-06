@@ -144,9 +144,9 @@ async function handlePaymentSuccess(
     let expiresAt: string | null = null;
     if (!isVpnProduct) {
       const expirationDate = new Date(now);
-      // Today (purchase day) is FREE. Expires at START of (today + paid_days) day
-      // e.g., 3 days paid on Feb 6 -> expires Feb 9 00:00 (Feb 6 free, 7/8/9 are 3 full paid days)
-      expirationDate.setDate(expirationDate.getDate() + expiryDays);
+      // Today (purchase day) is FREE. Next X days are paid. Expires at 00:00 after paid days.
+      // e.g., 3 days paid on Feb 6 -> expires Feb 10 00:00 (6 free, 7/8/9 are 3 paid days)
+      expirationDate.setDate(expirationDate.getDate() + expiryDays + 1);
       expirationDate.setHours(0, 0, 0, 0);
       expiresAt = expirationDate.toISOString();
     }
