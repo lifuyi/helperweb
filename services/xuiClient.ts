@@ -229,9 +229,10 @@ export class XuiApiClient {
 
     const now = new Date();
     const expiryDate = new Date(now);
-    // Today (purchase day) is FREE, so add +1 day to give full paid duration starting from tomorrow
-    expiryDate.setDate(expiryDate.getDate() + expiryDays + 1);
-    expiryDate.setHours(23, 59, 59, 999);
+    // Today (purchase day) is FREE. Expires at START of (today + paid_days) day
+    // e.g., 3 days paid on Feb 6 -> expires Feb 9 00:00 (Feb 6 free, 7/8/9 are 3 full paid days)
+    expiryDate.setDate(expiryDate.getDate() + expiryDays);
+    expiryDate.setHours(0, 0, 0, 0);
     
     const expiryTime = expiryDays > 0 ? expiryDate.getTime() : 0;
 
