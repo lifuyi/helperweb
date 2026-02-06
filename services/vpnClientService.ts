@@ -80,8 +80,9 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
       expiresAt = new Date(xuiResult.expiryTime).toISOString();
     } else if (expiryDays > 0) {
       // Fallback: calculate expiry time ourselves
+      // Today (purchase day) is FREE, so add +1 day to give full paid duration starting from tomorrow
       const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + expiryDays);
+      expiryDate.setDate(expiryDate.getDate() + expiryDays + 1);
       expiryDate.setHours(23, 59, 59, 999);
       expiresAt = expiryDate.toISOString();
     }
