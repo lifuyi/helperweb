@@ -290,10 +290,13 @@ export async function activateAccessToken(
     const isVpn = productId.startsWith('vpn-');
 
     // For VPN products: calculate expiration from activation
+    // Today (activation day) is FREE. Next X days are paid. Expires at 00:00 after paid days.
+    // e.g., 3 days paid on Feb 6 -> expires Feb 10 00:00 (6 free, 7/8/9 are 3 paid days)
     let expiresAt: string | null = tokenData.expires_at;
     if (isVpn && !tokenData.expires_at) {
       const expirationDate = new Date(now);
-      expirationDate.setDate(expirationDate.getDate() + expiryDays);
+      expirationDate.setDate(expirationDate.getDate() + expiryDays + 1);
+      expirationDate.setHours(0, 0, 0, 0);
       expiresAt = expirationDate.toISOString();
     }
 

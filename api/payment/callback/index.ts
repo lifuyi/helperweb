@@ -134,61 +134,8 @@ async function handlePaymentSuccess(
 
     console.log('Purchase saved:', purchase);
 
-    // 2. Create access token with expiration based on product type
-    const expiryDays = getExpiryDaysForProduct(productId);
-    const isVpnProduct = productId.startsWith('vpn-');
-    const now = new Date();
-
-    // For VPN products: expires_at will be NULL, set on activation
-    // For other products (PDF guide): expires_at set immediately
-    let expiresAt: string | null = null;
-    if (!isVpnProduct) {
-      const expirationDate = new Date(now);
-      // Today (purchase day) is FREE. Next X days are paid. Expires at 00:00 after paid days.
-      // e.g., 3 days paid on Feb 6 -> expires Feb 10 00:00 (6 free, 7/8/9 are 3 paid days)
-      expirationDate.setDate(expirationDate.getDate() + expiryDays + 1);
-      expirationDate.setHours(0, 0, 0, 0);
-      expiresAt = expirationDate.toISOString();
-    }
-
-    const token = generateAccessToken();
-    console.log('Creating access token:', {
-      productId,
-      isVpnProduct,
-      expiryDays,
-      expiresAt: expiresAt ? `Set to ${expiresAt}` : 'NULL (will be set on activation)',
-    });
-
-    const { data: accessToken, error: tokenError } = await supabase
-      .from('access_tokens')
-      .insert({
-        user_id: userId,
-        product_id: productId,
-        token,
-        purchase_date: now.toISOString(),
-        expires_at: expiresAt,
-        activated_at: null, // Will be set when user activates
-      })
-      .select()
-      .single();
-
-    if (tokenError) {
-      console.error('Error creating access token - detailed:', {
-        message: tokenError.message,
-        code: tokenError.code,
-        details: tokenError.details,
-        hint: tokenError.hint,
-      });
-      throw tokenError;
-    }
-
-    console.log('Payment processed successfully:', {
-      purchaseId: purchase.id,
-      tokenId: accessToken.id,
-      productId,
-    });
-
-    // 3. Create VPN client for VPN products
+    // 2. Create VPN client for VPN products FIRST (to get real expiration)
+    let vpnExpiresAt: string | null = null;
     if (isVpnProduct) {
       console.log('Creating VPN client for product:', productId);
       try {
@@ -213,6 +160,8 @@ async function handlePaymentSuccess(
 
             if (vpnResult.success) {
               console.log('VPN client created successfully:', vpnResult.client?.id);
+              // Use the real VPN expiration from X-UI
+              vpnExpiresAt = vpnResult.client?.expires_at || null;
             } else {
               console.error('Failed to create VPN client:', vpnResult.error);
             }
@@ -225,6 +174,62 @@ async function handlePaymentSuccess(
         // Don't fail the entire payment if VPN creation fails
       }
     }
+
+    // 3. Create access token with expiration based on product type
+    const expiryDays = getExpiryDaysForProduct(productId);
+    const now = new Date();
+
+    // For VPN products: use the real expiration from X-UI
+    // For other products (PDF guide): calculate expiration immediately
+    let expiresAt: string | null = null;
+    if (isVpnProduct) {
+      // Use the VPN's actual expiration
+      expiresAt = vpnExpiresAt;
+    } else {
+      // Today (purchase day) is FREE. Next X days are paid. Expires at 00:00 after paid days.
+      // e.g., 3 days paid on Feb 6 -> expires Feb 10 00:00 (6 free, 7/8/9 are 3 paid days)
+      const expirationDate = new Date(now);
+      expirationDate.setDate(expirationDate.getDate() + expiryDays + 1);
+      expirationDate.setHours(0, 0, 0, 0);
+      expiresAt = expirationDate.toISOString();
+    }
+
+    const token = generateAccessToken();
+    console.log('Creating access token:', {
+      productId,
+      isVpnProduct,
+      expiryDays,
+      expiresAt: expiresAt ? `Set to ${expiresAt}` : 'NULL',
+    });
+
+    const { data: accessToken, error: tokenError } = await supabase
+      .from('access_tokens')
+      .insert({
+        user_id: userId,
+        product_id: productId,
+        token,
+        purchase_date: now.toISOString(),
+        expires_at: expiresAt,
+        activated_at: now.toISOString(), // VPN is immediately activated on payment
+      })
+      .select()
+      .single();
+
+    if (tokenError) {
+      console.error('Error creating access token - detailed:', {
+        message: tokenError.message,
+        code: tokenError.code,
+        details: tokenError.details,
+        hint: tokenError.hint,
+      });
+      throw tokenError;
+    }
+
+    console.log('Payment processed successfully:', {
+      purchaseId: purchase.id,
+      tokenId: accessToken.id,
+      productId,
+    });
 
     return { purchase, accessToken };
   } catch (error) {
