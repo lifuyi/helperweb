@@ -135,6 +135,7 @@ async function handlePaymentSuccess(
     console.log('Purchase saved:', purchase);
 
     // 2. Create VPN client for VPN products FIRST (to get real expiration)
+    const isVpnProduct = productId.startsWith('vpn-');
     let vpnExpiresAt: string | null = null;
     if (isVpnProduct) {
       console.log('Creating VPN client for product:', productId);
