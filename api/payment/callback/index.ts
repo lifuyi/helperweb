@@ -87,7 +87,8 @@ async function handlePaymentSuccess(
   productId: string,
   amount: number,
   currency: string,
-  stripeSessionId: string
+  stripeSessionId: string,
+  customerEmail?: string
 ) {
   try {
     console.log('handlePaymentSuccess called:', {
@@ -96,6 +97,7 @@ async function handlePaymentSuccess(
       amount,
       currency,
       stripeSessionId,
+      customerEmail,
     });
 
     const supabase = getSupabaseClient();
@@ -142,7 +144,7 @@ async function handlePaymentSuccess(
     if (isVpnProduct) {
       console.log('Creating VPN client for product:', productId);
       try {
-        // Get user email from Supabase
+        // Use customer email from Stripe if available, otherwise fallback to user email from database
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('email')
@@ -159,16 +161,20 @@ async function handlePaymentSuccess(
             const { createVpnClient } = await import('../../../services/vpnClientService.js');
             console.log('Successfully imported createVpnClient function');
             
+            // Use Stripe customer email if available, otherwise use user email from database
+            const userEmailForVpn = customerEmail || userData.email;
+            console.log('Using email for VPN client:', userEmailForVpn);
+            
             console.log('Calling createVpnClient with:', { 
               userId, 
-              email: userData.email, 
+              email: userEmailForVpn, 
               productId, 
               sessionId: stripeSessionId 
             });
             
             const vpnResult = await createVpnClient({
               userId,
-              email: userData.email,
+              email: userEmailForVpn,
               productId,
               sessionId: stripeSessionId,
             });
@@ -308,6 +314,7 @@ export async function GET(request: Request) {
       metadata: session.metadata,
       amount: session.amount_total,
       currency: session.currency,
+      customerEmail: session.customer_details?.email,
     });
 
     if (session.payment_status === 'paid') {
@@ -337,7 +344,14 @@ export async function GET(request: Request) {
 
       try {
         console.log('🚀 Calling handlePaymentSuccess...');
-        await handlePaymentSuccess(userId, productId, amount, currency, sessionId);
+        await handlePaymentSuccess(
+          userId, 
+          productId, 
+          amount, 
+          currency, 
+          sessionId, 
+          session.customer_details?.email
+        );
         console.log('✅ Payment processing completed successfully');
         // Return HTML that will redirect after a short delay, or use a meta refresh
         return new Response(
