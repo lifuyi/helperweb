@@ -144,54 +144,60 @@ async function handlePaymentSuccess(
     if (isVpnProduct) {
       console.log('Creating VPN client for product:', productId);
       try {
-        // Use customer email from Stripe if available, otherwise fallback to user email from database
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('email')
-          .eq('id', userId)
-          .single();
+        // Prioritize Stripe customer email from checkout page
+        let userEmailForVpn = customerEmail;
+        
+        // Only fallback to database email if Stripe email is not available
+        if (!userEmailForVpn) {
+          console.log('No Stripe customer email, fetching from database...');
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('email')
+            .eq('id', userId)
+            .single();
 
-        if (userError || !userData?.email) {
-          console.error('Could not get user email for VPN creation:', userError);
-        } else {
-          try {
-            // Directly call the VPN creation function instead of HTTP API call
-            // This avoids the serverless function self-call issue
-            console.log('Importing vpnClientService from ../../../services/vpnClientService.js');
-            const { createVpnClient } = await import('../../../services/vpnClientService.js');
-            console.log('Successfully imported createVpnClient function');
-            
-            // Use Stripe customer email if available, otherwise use user email from database
-            const userEmailForVpn = customerEmail || userData.email;
-            console.log('Using email for VPN client:', userEmailForVpn);
-            
-            console.log('Calling createVpnClient with:', { 
-              userId, 
-              email: userEmailForVpn, 
-              productId, 
-              sessionId: stripeSessionId 
-            });
-            
-            const vpnResult = await createVpnClient({
-              userId,
-              email: userEmailForVpn,
-              productId,
-              sessionId: stripeSessionId,
-            });
-
-            console.log('VPN creation result:', vpnResult);
-
-            if (vpnResult.success) {
-              console.log('✅ VPN client created successfully:', vpnResult.client?.id);
-              // Use the real VPN expiration from X-UI
-              vpnExpiresAt = vpnResult.client?.expires_at || null;
-            } else {
-              console.error('❌ Failed to create VPN client:', vpnResult.error, vpnResult.details);
-            }
-          } catch (importError) {
-            console.error('❌ Failed to import or call vpnClientService:', importError);
-            console.error('Import error stack:', importError.stack);
+          if (userError || !userData?.email) {
+            console.error('Could not get user email for VPN creation:', userError);
+            throw new Error('No email available for VPN client creation');
           }
+          userEmailForVpn = userData.email;
+        }
+        
+        console.log('Using email for VPN client:', userEmailForVpn);
+        
+        try {
+          // Directly call the VPN creation function instead of HTTP API call
+          // This avoids the serverless function self-call issue
+          console.log('Importing vpnClientService from ../../../services/vpnClientService.js');
+          const { createVpnClient } = await import('../../../services/vpnClientService.js');
+          console.log('Successfully imported createVpnClient function');
+          
+          console.log('Calling createVpnClient with:', { 
+            userId, 
+            email: userEmailForVpn, 
+            productId, 
+            sessionId: stripeSessionId 
+          });
+          
+          const vpnResult = await createVpnClient({
+            userId,
+            email: userEmailForVpn,
+            productId,
+            sessionId: stripeSessionId,
+          });
+
+          console.log('VPN creation result:', vpnResult);
+
+          if (vpnResult.success) {
+            console.log('✅ VPN client created successfully:', vpnResult.client?.id);
+            // Use the real VPN expiration from X-UI
+            vpnExpiresAt = vpnResult.client?.expires_at || null;
+          } else {
+            console.error('❌ Failed to create VPN client:', vpnResult.error, vpnResult.details);
+          }
+        } catch (importError) {
+          console.error('❌ Failed to import or call vpnClientService:', importError);
+          console.error('Import error stack:', importError.stack);
         }
       } catch (vpnError) {
         console.error('❌ Error creating VPN client:', vpnError);

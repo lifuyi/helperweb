@@ -54,6 +54,7 @@ async function createCheckoutSession(data) {
     cancel_url: cancelUrl,
     payment_method_types: ["card"],
     allow_promotion_codes: true,
+    customer_creation: "always",
     metadata: { productId, productType, ...userId && { userId } }
   };
   if (promotionCode) {

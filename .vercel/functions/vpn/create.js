@@ -24757,7 +24757,7 @@ async function createVpnClient(request) {
       console.error("[VPN] Invalid expiry days:", expiryDays);
       return { success: false, error: "Invalid product" };
     }
-    const uniqueEmail = `vpn-${email.split("@")[0]}@${email.split("@")[1]}`;
+    const uniqueEmail = `vpn-${sessionId.substring(0, 8)}@${email.split("@")[1]}`;
     console.log("[VPN] Generated unique VPN client email:", uniqueEmail);
     console.log("[VPN] Proceeding to create new VPN client");
     console.log("[VPN] Calling createXuiClientWithExpiration");

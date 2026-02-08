@@ -24355,7 +24355,7 @@ async function createVpnClient(request) {
       console.error("[VPN] Invalid expiry days:", expiryDays);
       return { success: false, error: "Invalid product" };
     }
-    const uniqueEmail = `vpn-${email.split("@")[0]}@${email.split("@")[1]}`;
+    const uniqueEmail = `vpn-${sessionId.substring(0, 8)}@${email.split("@")[1]}`;
     console.log("[VPN] Generated unique VPN client email:", uniqueEmail);
     console.log("[VPN] Proceeding to create new VPN client");
     console.log("[VPN] Calling createXuiClientWithExpiration");
@@ -25098,39 +25098,43 @@ async function handlePaymentSuccess(userId, productId, amount, currency, stripeS
     if (isVpnProduct) {
       console.log("Creating VPN client for product:", productId);
       try {
-        const { data: userData, error: userError } = await supabase2.from("users").select("email").eq("id", userId).single();
-        if (userError || !userData?.email) {
-          console.error("Could not get user email for VPN creation:", userError);
-        } else {
-          try {
-            console.log("Importing vpnClientService from ../../../services/vpnClientService.js");
-            const { createVpnClient: createVpnClient2 } = await Promise.resolve().then(() => (init_vpnClientService(), vpnClientService_exports));
-            console.log("Successfully imported createVpnClient function");
-            const userEmailForVpn = customerEmail || userData.email;
-            console.log("Using email for VPN client:", userEmailForVpn);
-            console.log("Calling createVpnClient with:", {
-              userId,
-              email: userEmailForVpn,
-              productId,
-              sessionId: stripeSessionId
-            });
-            const vpnResult = await createVpnClient2({
-              userId,
-              email: userEmailForVpn,
-              productId,
-              sessionId: stripeSessionId
-            });
-            console.log("VPN creation result:", vpnResult);
-            if (vpnResult.success) {
-              console.log("\u2705 VPN client created successfully:", vpnResult.client?.id);
-              vpnExpiresAt = vpnResult.client?.expires_at || null;
-            } else {
-              console.error("\u274C Failed to create VPN client:", vpnResult.error, vpnResult.details);
-            }
-          } catch (importError) {
-            console.error("\u274C Failed to import or call vpnClientService:", importError);
-            console.error("Import error stack:", importError.stack);
+        let userEmailForVpn = customerEmail;
+        if (!userEmailForVpn) {
+          console.log("No Stripe customer email, fetching from database...");
+          const { data: userData, error: userError } = await supabase2.from("users").select("email").eq("id", userId).single();
+          if (userError || !userData?.email) {
+            console.error("Could not get user email for VPN creation:", userError);
+            throw new Error("No email available for VPN client creation");
           }
+          userEmailForVpn = userData.email;
+        }
+        console.log("Using email for VPN client:", userEmailForVpn);
+        try {
+          console.log("Importing vpnClientService from ../../../services/vpnClientService.js");
+          const { createVpnClient: createVpnClient2 } = await Promise.resolve().then(() => (init_vpnClientService(), vpnClientService_exports));
+          console.log("Successfully imported createVpnClient function");
+          console.log("Calling createVpnClient with:", {
+            userId,
+            email: userEmailForVpn,
+            productId,
+            sessionId: stripeSessionId
+          });
+          const vpnResult = await createVpnClient2({
+            userId,
+            email: userEmailForVpn,
+            productId,
+            sessionId: stripeSessionId
+          });
+          console.log("VPN creation result:", vpnResult);
+          if (vpnResult.success) {
+            console.log("\u2705 VPN client created successfully:", vpnResult.client?.id);
+            vpnExpiresAt = vpnResult.client?.expires_at || null;
+          } else {
+            console.error("\u274C Failed to create VPN client:", vpnResult.error, vpnResult.details);
+          }
+        } catch (importError) {
+          console.error("\u274C Failed to import or call vpnClientService:", importError);
+          console.error("Import error stack:", importError.stack);
         }
       } catch (vpnError) {
         console.error("\u274C Error creating VPN client:", vpnError);
