@@ -365,13 +365,10 @@ export async function GET(request: Request) {
           customerEmail
         );
         console.log('✅ Payment processing completed successfully');
-        // Return HTML that will redirect after a short delay, or use a meta refresh
-        return new Response(
-          `<html><head><meta http-equiv="refresh" content="0; url=/payment/success?session_id=${sessionId}&product=${productId}" /></head><body>Redirecting...</body></html>`,
-          {
-            status: 200,
-            headers: { 'Content-Type': 'text/html' },
-          }
+        // Use HTTP redirect instead of meta refresh
+        return Response.redirect(
+          new URL(`/payment/success?session_id=${sessionId}&product=${productId}`, request.url),
+          302
         );
       } catch (error) {
         console.error('❌ Failed to save payment details:', error);
