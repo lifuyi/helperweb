@@ -94,7 +94,7 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
   success: boolean;
   client?: VpnClientRecord;
   error?: string;
-  details?: string;
+  details?: any;
   code?: string;
 }> {
   const { userId, email, productId, sessionId } = request;
@@ -113,7 +113,25 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
       return { success: false, error: 'Invalid product' };
     }
 
-    console.log('[VPN] Proceeding to create new VPN client');
+    // Check if user already has an active VPN client for this product
+    console.log('[VPN] Checking for existing VPN client...');
+    const { data: existingClient } = await supabase
+      .from('vpn_urls')
+      .select('*')
+      .eq('assigned_to_user_id', userId)
+      .eq('product_id', productId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (existingClient) {
+      console.log('[VPN] Found existing active VPN client:', existingClient.id);
+      return { 
+        success: true, 
+        client: existingClient as VpnClientRecord 
+      };
+    }
+
+    console.log('[VPN] No existing client found, proceeding to create new VPN client');
     console.log('[VPN] Calling createXuiClientWithExpiration');
     const xuiResult = await createXuiClientWithExpiration(email, expiryDays);
     if (!xuiResult) {
@@ -262,8 +280,23 @@ async function createXuiClientWithExpiration(
     console.log('[VPN] Client creation response:', created);
 
     if (!created) {
-      console.error('[VPN] Client creation returned null/false');
+      console.error('[VPN] Client creation returned null');
       logger.error('Failed to create X-UI client');
+      
+      // Check if client already exists (duplicate email error)
+      console.log('[VPN] Checking if client already exists in X-UI...');
+      const existingClient = await xui.findClientByEmail(email);
+      
+      if (existingClient) {
+        console.log('[VPN] Found existing client in X-UI:', existingClient);
+        logger.log(`Using existing X-UI client for ${email}`);
+        return {
+          uuid: existingClient.uuid,
+          inboundId: existingClient.id,
+          expiryTime: existingClient.expiryTime
+        };
+      }
+      
       return null;
     }
 

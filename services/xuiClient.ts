@@ -212,6 +212,39 @@ export class XuiApiClient {
   }
 
   /**
+   * Find an existing client by email
+   * @param email - Client email to search for
+   */
+  async findClientByEmail(email: string): Promise<XuiClient | null> {
+    const inbounds = await this.getInbounds();
+    
+    for (const inbound of inbounds) {
+      const clients = this.getClientsFromInbound(inbound);
+      const existingClient = clients.find(c => c.email === email);
+      
+      if (existingClient) {
+        console.log('[X-UI] Found existing client by email:', {
+          email,
+          uuid: existingClient.id,
+          inboundId: inbound.id,
+        });
+        return {
+          id: inbound.id,
+          enable: existingClient.enable,
+          email: existingClient.email,
+          uuid: existingClient.id,
+          limitIp: existingClient.limitIp,
+          totalGB: existingClient.totalGB,
+          expiryTime: existingClient.expiryTime,
+          subId: existingClient.subId,
+        };
+      }
+    }
+    
+    return null;
+  }
+
+  /**
    * Create a new client for an inbound
    * @param inboundId - The inbound (port) ID to add client to
    * @param email - Client identifier (usually user's email)
