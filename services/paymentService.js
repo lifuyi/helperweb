@@ -1,56 +1,61 @@
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-};
-
-// utils/logger.ts
-var isDevelopment, logger;
-var init_logger = __esm({
-  "utils/logger.ts"() {
-    isDevelopment = false;
-    logger = {
-      log: (...args) => {
-        if (isDevelopment) {
-          console.log(...args);
-        }
-      },
-      error: (...args) => {
-        if (isDevelopment) {
-          console.error(...args);
-        }
-      },
-      warn: (...args) => {
-        if (isDevelopment) {
-          console.warn(...args);
-        }
-      },
-      info: (...args) => {
-        if (isDevelopment) {
-          console.info(...args);
-        }
-      }
-    };
-  }
-});
-
-// services/supabaseService.ts
-init_logger();
+// services/supabaseClient.js
 import { createClient } from "@supabase/supabase-js";
-
-// utils/sessionManager.ts
-init_logger();
-var SESSION_EXPIRATION_TIME = 24 * 60 * 60 * 1e3;
-
-// services/supabaseService.ts
-var supabaseUrl = process.env.VITE_SUPABASE_URL;
-var supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase configuration. Please check your environment variables.");
+var supabaseUrl = (typeof __SUPABASE_URL__ !== "undefined" ? __SUPABASE_URL__ : "") || process.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+var supabaseAnonKey = (typeof __SUPABASE_ANON_KEY__ !== "undefined" ? __SUPABASE_ANON_KEY__ : "") || import.meta?.env?.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+var supabaseInstance = null;
+function getSupabaseClient() {
+  if (!supabaseInstance) {
+    const url = supabaseUrl || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const key = supabaseAnonKey || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+    if (!url || !key) {
+      throw new Error("Missing Supabase configuration");
+    }
+    supabaseInstance = createClient(url, key);
+  }
+  return supabaseInstance;
 }
-var supabase = createClient(supabaseUrl, supabaseAnonKey);
+var supabase = getSupabaseClient();
 
-// services/userService.ts
-init_logger();
+// services/userService.js
+import { createClient as createClient2 } from "@supabase/supabase-js";
+var supabaseUrl2 = (typeof __SUPABASE_URL__ !== "undefined" ? __SUPABASE_URL__ : "") || process.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+var supabaseAnonKey2 = (typeof __SUPABASE_ANON_KEY__ !== "undefined" ? __SUPABASE_ANON_KEY__ : "") || import.meta?.env?.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+var supabaseInstance2 = null;
+function getSupabaseClient2() {
+  if (!supabaseInstance2) {
+    const url = supabaseUrl2 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const key = supabaseAnonKey2 || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+    if (!url || !key) {
+      throw new Error("Missing Supabase configuration");
+    }
+    supabaseInstance2 = createClient2(url, key);
+  }
+  return supabaseInstance2;
+}
+var supabase2 = getSupabaseClient2();
+var isDevelopment = false;
+var logger = {
+  log: (...args) => {
+    if (isDevelopment) {
+      console.log(...args);
+    }
+  },
+  error: (...args) => {
+    if (isDevelopment) {
+      console.error(...args);
+    }
+  },
+  warn: (...args) => {
+    if (isDevelopment) {
+      console.warn(...args);
+    }
+  },
+  info: (...args) => {
+    if (isDevelopment) {
+      console.info(...args);
+    }
+  }
+};
 function generateToken() {
   const array = new Uint8Array(32);
   if (typeof window !== "undefined" && window.crypto) {
@@ -73,7 +78,7 @@ async function createAccessToken(userId, productId, expiryDays = 30) {
       expirationDate.setDate(expirationDate.getDate() + expiryDays);
       expiresAt = expirationDate.toISOString();
     }
-    const { data, error } = await supabase.from("access_tokens").insert({
+    const { data, error } = await supabase2.from("access_tokens").insert({
       user_id: userId,
       token,
       product_id: productId,
@@ -92,9 +97,9 @@ async function createAccessToken(userId, productId, expiryDays = 30) {
 }
 async function updateUserProfile(userId, productId) {
   try {
-    const { data: profile } = await supabase.from("user_profiles").select("*").eq("user_id", userId).single();
+    const { data: profile } = await supabase2.from("user_profiles").select("*").eq("user_id", userId).single();
     if (!profile) return;
-    await supabase.from("user_profiles").update({
+    await supabase2.from("user_profiles").update({
       purchase_count: profile.purchase_count + 1,
       last_purchase_date: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
@@ -107,8 +112,30 @@ function generateAccessUrl(token, baseUrl = window.location.origin) {
   return `${baseUrl}/access?token=${token}`;
 }
 
-// services/paymentService.ts
-init_logger();
+// utils/logger.js
+var isDevelopment2 = false;
+var logger2 = {
+  log: (...args) => {
+    if (isDevelopment2) {
+      console.log(...args);
+    }
+  },
+  error: (...args) => {
+    if (isDevelopment2) {
+      console.error(...args);
+    }
+  },
+  warn: (...args) => {
+    if (isDevelopment2) {
+      console.warn(...args);
+    }
+  },
+  info: (...args) => {
+    if (isDevelopment2) {
+      console.info(...args);
+    }
+  }
+};
 
 // config/products.js
 var DEFAULT_PRODUCTS = {
@@ -151,12 +178,12 @@ async function loadProductsFromDatabase() {
     if (productsCache && Date.now() - cacheTimestamp < CACHE_TTL) {
       return productsCache;
     }
-    const { supabase: supabase2 } = await import("./services/supabaseService.js").then((m) => m).catch(() => null);
-    if (!supabase2) {
+    const { supabase: supabase4 } = await import("./services/supabaseService.js").then((m) => m).catch(() => null);
+    if (!supabase4) {
       console.warn("Supabase client not available, using default products");
       return DEFAULT_PRODUCTS;
     }
-    const { data, error } = await supabase2.from("products").select("*").eq("is_active", true).order("display_order", { ascending: true });
+    const { data, error } = await supabase4.from("products").select("*").eq("is_active", true).order("display_order", { ascending: true });
     if (error) throw error;
     const products = {};
     if (data && Array.isArray(data)) {
@@ -190,26 +217,344 @@ function getProductName(productId) {
   return PRODUCTS[productId]?.name || productId;
 }
 
-// services/adminService.ts
-init_logger();
+// services/adminService.js
+import { createClient as createClient3 } from "@supabase/supabase-js";
+var __defProp = Object.defineProperty;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
+var isDevelopment3;
+var logger3;
+var init_logger = __esm({
+  "utils/logger.js"() {
+    isDevelopment3 = false;
+    logger3 = {
+      log: (...args) => {
+        if (isDevelopment3) {
+          console.log(...args);
+        }
+      },
+      error: (...args) => {
+        if (isDevelopment3) {
+          console.error(...args);
+        }
+      },
+      warn: (...args) => {
+        if (isDevelopment3) {
+          console.warn(...args);
+        }
+      },
+      info: (...args) => {
+        if (isDevelopment3) {
+          console.info(...args);
+        }
+      }
+    };
+  }
+});
+var emailService_exports = {};
+__export(emailService_exports, {
+  sendEmail: () => sendEmail,
+  sendLowInventoryAlert: () => sendLowInventoryAlert,
+  sendPasswordResetEmail: () => sendPasswordResetEmail,
+  sendPurchaseConfirmation: () => sendPurchaseConfirmation
+});
+async function sendEmail(config) {
+  try {
+    const response = await fetch("/api/email/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(config)
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to send email: ${response.statusText}`);
+    }
+    logger3.log("Email sent successfully to:", config.to);
+    return true;
+  } catch (error) {
+    logger3.error("Error sending email:", error);
+    return false;
+  }
+}
+async function sendLowInventoryAlert(adminEmails, stats) {
+  try {
+    const lowStockPercentage = 20;
+    const availablePercentage = 100 - stats.utilization;
+    if (availablePercentage > lowStockPercentage) {
+      logger3.log("Inventory levels normal, no alert needed");
+      return true;
+    }
+    const subject = `\u26A0\uFE0F Low VPN Inventory Alert - ${stats.activeVpnUrls} URLs Remaining`;
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #dc2626; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+          .alert-box { background-color: #fef2f2; border: 2px solid #fca5a5; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+          .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
+          .stat-item { background-color: #f3f4f6; padding: 15px; border-radius: 6px; }
+          .stat-label { font-size: 12px; color: #6b7280; margin-bottom: 5px; }
+          .stat-value { font-size: 24px; font-weight: bold; color: #111827; }
+          .button { 
+            background-color: #dc2626; 
+            color: white; 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            display: inline-block; 
+            margin: 20px 0;
+          }
+          .footer { margin-top: 20px; color: #666; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>\u26A0\uFE0F Low VPN Inventory Alert</h1>
+          </div>
 
-// utils/vlessParser.ts
-init_logger();
+          <div class="alert-box">
+            <p><strong>Inventory levels are running low!</strong></p>
+            <p>You have only ${stats.activeVpnUrls} active VPN URLs remaining (${availablePercentage.toFixed(1)}% available).</p>
+            <p>Consider importing more VPN URLs to avoid stockouts.</p>
+          </div>
 
-// services/adminService.ts
+          <h2>Current Inventory Status</h2>
+          <div class="stats">
+            <div class="stat-item">
+              <div class="stat-label">Total URLs</div>
+              <div class="stat-value">${stats.totalVpnUrls}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Active (Available)</div>
+              <div class="stat-value">${stats.activeVpnUrls}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Used (Sold)</div>
+              <div class="stat-value">${stats.usedVpnUrls}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Utilization</div>
+              <div class="stat-value">${stats.utilization.toFixed(1)}%</div>
+            </div>
+          </div>
+
+          <p>To add more VPN URLs, go to your admin panel and use the VPN Import feature.</p>
+
+          <a href="${window.location.origin}/admin" class="button">Go to Admin Panel</a>
+
+          <div class="footer">
+            <p>\xA9 2025 ChinaConnect. This is an automated alert. Please do not reply to this email.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    const text = `
+Low VPN Inventory Alert
+
+You have only ${stats.activeVpnUrls} active VPN URLs remaining (${availablePercentage.toFixed(1)}% available).
+
+Current Status:
+- Total URLs: ${stats.totalVpnUrls}
+- Active (Available): ${stats.activeVpnUrls}
+- Used (Sold): ${stats.usedVpnUrls}
+- Utilization: ${stats.utilization.toFixed(1)}%
+
+Please import more VPN URLs to avoid stockouts.
+
+Go to: ${window.location.origin}/admin
+
+\xA9 2025 ChinaConnect
+    `;
+    const results = await Promise.all(
+      adminEmails.map(
+        (email) => sendEmail({
+          from: process.env.REACT_APP_EMAIL_FROM || "noreply@chinaconnect.com",
+          to: email,
+          subject,
+          html,
+          text
+        })
+      )
+    );
+    const successCount = results.filter((r) => r).length;
+    logger3.log(`Sent low inventory alert to ${successCount}/${adminEmails.length} admins`);
+    return successCount > 0;
+  } catch (error) {
+    logger3.error("Error sending low inventory alert:", error);
+    return false;
+  }
+}
+async function sendPurchaseConfirmation(email, productName, vpnUrl, accessUrl) {
+  try {
+    const subject = `\u2713 Your ${productName} Purchase Confirmation`;
+    const vpnSection = vpnUrl ? `
+      <h3>Your VPN Address:</h3>
+      <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; word-break: break-all; font-family: monospace; font-size: 12px;">
+        ${vpnUrl}
+      </div>
+      <p style="color: #666; font-size: 12px; margin-top: 10px;">
+        <strong>Note:</strong> This VPN address is for your personal use only.
+      </p>
+    ` : "";
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #dc2626; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+          .button { 
+            background-color: #dc2626; 
+            color: white; 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            display: inline-block; 
+            margin: 20px 0;
+          }
+          .footer { margin-top: 20px; color: #666; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>\u2713 Thank You for Your Purchase!</h1>
+          </div>
+
+          <p>Your purchase of <strong>${productName}</strong> has been confirmed.</p>
+
+          ${vpnSection}
+
+          ${accessUrl ? `
+          <p>You can access your content here:</p>
+          <a href="${accessUrl}" class="button">Access Your Content</a>
+          ` : ""}
+
+          <p>If you have any questions, please contact our support team.</p>
+
+          <div class="footer">
+            <p>\xA9 2025 ChinaConnect.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    return await sendEmail({
+      from: process.env.REACT_APP_EMAIL_FROM || "noreply@chinaconnect.com",
+      to: email,
+      subject,
+      html
+    });
+  } catch (error) {
+    logger3.error("Error sending purchase confirmation:", error);
+    return false;
+  }
+}
+async function sendPasswordResetEmail(email, resetLink) {
+  try {
+    const subject = "Password Reset Request";
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: Arial, sans-serif; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { background-color: #dc2626; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+          .button { 
+            background-color: #dc2626; 
+            color: white; 
+            padding: 12px 24px; 
+            text-decoration: none; 
+            border-radius: 6px; 
+            display: inline-block; 
+            margin: 20px 0;
+          }
+          .footer { margin-top: 20px; color: #666; font-size: 12px; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Password Reset Request</h1>
+          </div>
+
+          <p>We received a password reset request for your account. Click the button below to reset your password:</p>
+
+          <a href="${resetLink}" class="button">Reset Password</a>
+
+          <p>This link will expire in 24 hours.</p>
+
+          <p>If you did not request this, you can safely ignore this email.</p>
+
+          <div class="footer">
+            <p>\xA9 2025 ChinaConnect.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+    return await sendEmail({
+      from: process.env.REACT_APP_EMAIL_FROM || "noreply@chinaconnect.com",
+      to: email,
+      subject,
+      html
+    });
+  } catch (error) {
+    logger3.error("Error sending password reset email:", error);
+    return false;
+  }
+}
+var init_emailService = __esm({
+  "services/emailService.ts"() {
+    init_logger();
+  }
+});
+var supabaseUrl3 = (typeof __SUPABASE_URL__ !== "undefined" ? __SUPABASE_URL__ : "") || process.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+var supabaseAnonKey3 = (typeof __SUPABASE_ANON_KEY__ !== "undefined" ? __SUPABASE_ANON_KEY__ : "") || import.meta?.env?.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+var supabaseInstance3 = null;
+function getSupabaseClient3() {
+  if (!supabaseInstance3) {
+    const url = supabaseUrl3 || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const key = supabaseAnonKey3 || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+    if (!url || !key) {
+      throw new Error("Missing Supabase configuration");
+    }
+    supabaseInstance3 = createClient3(url, key);
+  }
+  return supabaseInstance3;
+}
+var supabase3 = getSupabaseClient3();
+init_logger();
 async function getAvailableVpnUrl() {
   try {
-    const { data, error } = await supabase.from("vpn_urls").select("*").eq("status", "active").is("assigned_to_user_id", null).limit(1).single();
+    const { data, error } = await supabase3.from("vpn_urls").select("*").eq("status", "active").is("assigned_to_user_id", null).limit(1).single();
     if (error && error.code !== "PGRST116") throw error;
     return data || null;
   } catch (error) {
-    logger.error("Error getting available VPN URL:", error);
+    logger3.error("Error getting available VPN URL:", error);
     throw error;
   }
 }
 async function assignVpnUrlToUserOnPurchase(vpnUrlId, userId) {
   try {
-    const { data, error } = await supabase.from("vpn_urls").update({
+    const { data, error } = await supabase3.from("vpn_urls").update({
       assigned_to_user_id: userId,
       assigned_at: (/* @__PURE__ */ new Date()).toISOString(),
       status: "used",
@@ -217,10 +562,10 @@ async function assignVpnUrlToUserOnPurchase(vpnUrlId, userId) {
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
     }).eq("id", vpnUrlId).select().single();
     if (error) throw error;
-    logger.log(`VPN URL assigned to user ${userId}:`, vpnUrlId);
+    logger3.log(`VPN URL assigned to user ${userId}:`, vpnUrlId);
     return data;
   } catch (error) {
-    logger.error("Error assigning VPN URL to user:", error);
+    logger3.error("Error assigning VPN URL to user:", error);
     throw error;
   }
 }
@@ -255,13 +600,13 @@ async function handlePaymentSuccess(userId, productId, amount, currency = "usd",
           if (assignedUrl) {
             vpnUrl = assignedUrl.url;
             vpnAssignmentSuccess = true;
-            logger.log(`VPN URL assigned to user ${userId} for product ${productId}`);
+            logger2.log(`VPN URL assigned to user ${userId} for product ${productId}`);
           }
         } else {
-          logger.warn(`No available VPN URLs for product ${productId}`);
+          logger2.warn(`No available VPN URLs for product ${productId}`);
         }
       } catch (vpnError) {
-        logger.error("Error assigning VPN URL:", vpnError);
+        logger2.error("Error assigning VPN URL:", vpnError);
       }
     }
     return {
@@ -272,7 +617,7 @@ async function handlePaymentSuccess(userId, productId, amount, currency = "usd",
       vpnAssignmentSuccess
     };
   } catch (error) {
-    logger.error("Error handling payment success:", error);
+    logger2.error("Error handling payment success:", error);
     throw error;
   }
 }
@@ -289,7 +634,7 @@ async function savePurchase(userId, productId, amount, currency = "usd", stripeS
     if (error) throw error;
     return data;
   } catch (error) {
-    logger.error("Error saving purchase:", error);
+    logger2.error("Error saving purchase:", error);
     throw error;
   }
 }
@@ -299,7 +644,7 @@ async function getPurchase(purchaseId) {
     if (error && error.code !== "PGRST116") throw error;
     return data || null;
   } catch (error) {
-    logger.error("Error getting purchase:", error);
+    logger2.error("Error getting purchase:", error);
     throw error;
   }
 }
@@ -309,7 +654,7 @@ async function getUserPurchases(userId) {
     if (error) throw error;
     return data || [];
   } catch (error) {
-    logger.error("Error getting user purchases:", error);
+    logger2.error("Error getting user purchases:", error);
     throw error;
   }
 }
@@ -319,7 +664,7 @@ async function getPurchaseByStripeSession(stripeSessionId) {
     if (error && error.code !== "PGRST116") throw error;
     return data || null;
   } catch (error) {
-    logger.error("Error getting purchase by stripe session:", error);
+    logger2.error("Error getting purchase by stripe session:", error);
     throw error;
   }
 }
@@ -332,7 +677,7 @@ async function updatePurchaseStatus(purchaseId, status) {
     if (error) throw error;
     return data;
   } catch (error) {
-    logger.error("Error updating purchase status:", error);
+    logger2.error("Error updating purchase status:", error);
     throw error;
   }
 }

@@ -5,12 +5,9 @@ import { logger } from '../utils/logger';
 import {
   getUserOrders,
   OrderDetails,
-  generateVpnUrl,
   formatDate,
   getDaysRemaining,
-  isTokenActive,
 } from '../services/orderService';
-import { AccessToken } from '../services/userService';
 
 interface UserCenterProps {
   onBack: () => void;
@@ -21,7 +18,6 @@ export const UserCenter: React.FC<UserCenterProps> = ({ onBack }) => {
   const [orders, setOrders] = useState<OrderDetails[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 
   useEffect(() => {
     logger.log('UserCenter mounted. Authenticated:', isAuthenticated, 'User:', user);
@@ -54,19 +50,6 @@ export const UserCenter: React.FC<UserCenterProps> = ({ onBack }) => {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleCopyUrl = (token: string, tokenId: string) => {
-    const url = generateVpnUrl(token);
-    navigator.clipboard.writeText(url).then(() => {
-      setCopiedTokenId(tokenId);
-      setTimeout(() => setCopiedTokenId(null), 2000);
-    });
-  };
-
-  const handleDownloadUrl = (token: string) => {
-    const url = generateVpnUrl(token);
-    window.open(url, '_blank');
   };
 
   if (!isAuthenticated) {
@@ -176,9 +159,6 @@ export const UserCenter: React.FC<UserCenterProps> = ({ onBack }) => {
               <OrderCard
                 key={order.id}
                 order={order}
-                onCopyUrl={handleCopyUrl}
-                onDownloadUrl={handleDownloadUrl}
-                copiedTokenId={copiedTokenId}
               />
             ))
           )}
@@ -190,22 +170,11 @@ export const UserCenter: React.FC<UserCenterProps> = ({ onBack }) => {
 
 interface OrderCardProps {
   order: OrderDetails;
-  onCopyUrl: (token: string, tokenId: string) => void;
-  onDownloadUrl: (token: string) => void;
-  copiedTokenId: string | null;
 }
 
 const OrderCard: React.FC<OrderCardProps> = ({
   order,
-  onCopyUrl,
-  onDownloadUrl,
-  copiedTokenId,
 }) => {
-  const [expandedTokenId, setExpandedTokenId] = useState<string | null>(null);
-
-  // Filter VPN orders to show only active tokens
-  const vpnTokens = order.access_tokens.filter((token) => isTokenActive(token));
-
   return (
     <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
       {/* Order Header */}
@@ -292,53 +261,13 @@ const OrderCard: React.FC<OrderCardProps> = ({
               </div>
             </>
           )}
-
-          {/* Show access tokens if any */}
-          {vpnTokens.length > 0 && (
-            <>
-              <h4 className="font-semibold text-slate-900 mb-4 flex items-center">
-                <svg
-                  className="w-5 h-5 mr-2 text-chinaRed"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.658 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-                  />
-                </svg>
-                Your VPN Access URLs
-              </h4>
-
-              <div className="space-y-3">
-                {vpnTokens.map((token) => (
-                  <VpnTokenItem
-                    key={token.id}
-                    token={token}
-                    isExpanded={expandedTokenId === token.id}
-                    onToggleExpand={() =>
-                      setExpandedTokenId(expandedTokenId === token.id ? null : token.id)
-                    }
-                    onCopyUrl={() => onCopyUrl(token.token, token.id)}
-                    onDownloadUrl={() => onDownloadUrl(token.token)}
-                    isCopied={copiedTokenId === token.id}
-                  />
-                ))}
-              </div>
-            </>
-          )}
         </div>
       ) : order.status === 'completed' ? (
         <div className="px-6 py-4">
           <p className="text-slate-600 text-sm">
-            {order.access_tokens.length === 0 && (!order.vpn_urls || order.vpn_urls.length === 0)
-              ? 'No active access URLs available'
-              : order.access_tokens.some(t => !t.expires_at)
-                ? 'VPN client is being provisioned...'
-                : 'All access URLs have expired'}
+            {!order.vpn_urls || order.vpn_urls.length === 0
+              ? 'VPN client is being provisioned...'
+              : ''}
           </p>
         </div>
       ) : (
@@ -352,121 +281,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
   );
 };
 
-interface VpnTokenItemProps {
-  token: AccessToken;
-  isExpanded: boolean;
-  onToggleExpand: () => void;
-  onCopyUrl: () => void;
-  onDownloadUrl: () => void;
-  isCopied: boolean;
-}
 
-const VpnTokenItem: React.FC<VpnTokenItemProps> = ({
-  token,
-  isExpanded,
-  onToggleExpand,
-  onCopyUrl,
-  onDownloadUrl,
-  isCopied,
-}) => {
-  const daysRemaining = getDaysRemaining(token.expires_at);
-  const isProvisioning = daysRemaining === -1;
-  const isExpired = !isProvisioning && daysRemaining <= 0;
-
-  return (
-    <div className="border border-slate-200 rounded-lg p-4 hover:border-chinaRed transition-colors">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
-            <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-700">
-              {token.token.slice(0, 12)}...{token.token.slice(-8)}
-            </span>
-            <span
-              className={`text-xs font-semibold px-2 py-1 rounded-full ${isProvisioning
-                ? 'bg-blue-100 text-blue-800'
-                : isExpired
-                  ? 'bg-red-100 text-red-800'
-                  : daysRemaining <= 3
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-green-100 text-green-800'
-                }`}
-            >
-              {isProvisioning ? 'Provisioning' : isExpired ? 'Expired' : `${daysRemaining} days left`}
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">
-            Created: {formatDate(token.created_at)} • Expires: {formatDate(token.expires_at)}
-          </p>
-        </div>
-
-        <button
-          onClick={onToggleExpand}
-          className="text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <svg
-            className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
-        </button>
-      </div>
-
-      {isExpanded && !isExpired && (
-        <div className="pt-3 border-t border-slate-200 space-y-2">
-          <div className="bg-slate-50 p-3 rounded border border-slate-200 break-all font-mono text-xs text-slate-700">
-            {`${window.location.origin}/access?token=${token.token}`}
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={onCopyUrl}
-              className={`flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded border transition-colors ${isCopied
-                ? 'bg-green-50 border-green-300 text-green-700'
-                : 'bg-slate-50 border-slate-300 text-slate-700 hover:bg-slate-100'
-                }`}
-            >
-              {isCopied ? (
-                <>
-                  <Check className="w-4 h-4" />
-                  <span className="text-sm font-medium">Copied!</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-4 h-4" />
-                  <span className="text-sm font-medium">Copy URL</span>
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={onDownloadUrl}
-              className="flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded bg-chinaRed hover:bg-red-700 text-white transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                />
-              </svg>
-              <span className="text-sm font-medium">Open URL</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {isExpired && (
-        <div className="pt-3 border-t border-slate-200">
-          <p className="text-sm text-red-600">This access URL has expired.</p>
-        </div>
-      )}
-    </div>
-  );
-};
 
 interface VlessUrlItemProps {
   vpnUrl: any;
@@ -474,7 +289,6 @@ interface VlessUrlItemProps {
 
 const VlessUrlItem: React.FC<VlessUrlItemProps> = ({ vpnUrl }) => {
   const [isCopied, setIsCopied] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(vpnUrl.vless_url).then(() => {
@@ -489,52 +303,36 @@ const VlessUrlItem: React.FC<VlessUrlItemProps> = ({ vpnUrl }) => {
 
   return (
     <div className="border border-slate-200 rounded-lg p-4 hover:border-chinaRed transition-colors">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
-            <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-700">
-              {vpnUrl.vless_name || vpnUrl.vless_uuid?.slice(0, 12) + '...'}
-            </span>
-            <span
-              className={`text-xs font-semibold px-2 py-1 rounded-full ${isProvisioning
-                  ? 'bg-blue-100 text-blue-800'
-                  : isExpired
-                    ? 'bg-red-100 text-red-800'
-                    : daysRemaining <= 3
-                      ? 'bg-amber-100 text-amber-800'
-                      : 'bg-green-100 text-green-800'
-                }`}
-            >
-              {isProvisioning ? 'Provisioning' : isExpired ? 'Expired' : `${daysRemaining} days left`}
-            </span>
-            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
-              VLESS
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">
-            Created: {formatDate(vpnUrl.created_at)} • Expires: {formatDate(vpnUrl.expires_at)}
-          </p>
-          <p className="text-xs text-slate-500 mt-1">
-            Server: {vpnUrl.vless_host}:{vpnUrl.vless_port} • Security: {vpnUrl.security_type}
-          </p>
-        </div>
-
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <svg
-            className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      <div className="mb-3">
+        <div className="flex items-center space-x-2 mb-2">
+          <span className="font-mono text-xs bg-slate-100 px-2 py-1 rounded text-slate-700">
+            {vpnUrl.vless_name || vpnUrl.vless_uuid?.slice(0, 12) + '...'}
+          </span>
+          <span
+            className={`text-xs font-semibold px-2 py-1 rounded-full ${isProvisioning
+                ? 'bg-blue-100 text-blue-800'
+                : isExpired
+                  ? 'bg-red-100 text-red-800'
+                  : daysRemaining <= 3
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-green-100 text-green-800'
+              }`}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-          </svg>
-        </button>
+            {isProvisioning ? 'Provisioning' : isExpired ? 'Expired' : `${daysRemaining} days left`}
+          </span>
+          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
+            VLESS
+          </span>
+        </div>
+        <p className="text-xs text-slate-500">
+          Created: {formatDate(vpnUrl.created_at)} • Expires: {formatDate(vpnUrl.expires_at)}
+        </p>
+        <p className="text-xs text-slate-500 mt-1">
+          Server: {vpnUrl.vless_host}:{vpnUrl.vless_port} • Security: {vpnUrl.security_type}
+        </p>
       </div>
 
-      {isExpanded && !isExpired && (
+      {!isExpired && (
         <div className="pt-3 border-t border-slate-200 space-y-2">
           <div className="bg-slate-50 p-3 rounded border border-slate-200 break-all font-mono text-xs text-slate-700">
             {vpnUrl.vless_url}

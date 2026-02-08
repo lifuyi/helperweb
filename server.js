@@ -299,7 +299,7 @@ async function handleSuccessfulPayment(session) {
 }
 
 // Callback API
-app.get('/api/payment/callback', (req, res) => {
+app.get('/api/payment/callback', async (req, res) => {
   try {
     const { session_id } = req.query;
     
@@ -308,10 +308,368 @@ app.get('/api/payment/callback', (req, res) => {
       return res.status(400).json({ error: 'Invalid session ID format' });
     }
     
+    console.log('[PAYMENT CALLBACK] Received callback for session:', session_id);
+    
+    // Retrieve session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(session_id, {
+      expand: ['payment_intent', 'customer'],
+    });
+
+    console.log('[PAYMENT CALLBACK] Stripe session retrieved:', {
+      payment_status: session.payment_status,
+      metadata: session.metadata,
+      amount: session.amount_total,
+      currency: session.currency,
+    });
+
+    if (session.payment_status === 'paid') {
+      const productId = session.metadata?.productId;
+      const userId = session.metadata?.userId;
+      const amount = session.amount_total ? session.amount_total / 100 : 0;
+      const currency = session.currency || 'usd';
+
+      console.log('[PAYMENT CALLBACK] Payment confirmed. Processing:', {
+        productId,
+        userId,
+        amount,
+        currency,
+      });
+
+      // Save purchase and create access token + VPN client
+      if (!userId) {
+        console.error('[PAYMENT CALLBACK] No userId in session metadata');
+        return res.status(400).json({ error: 'No userId in session metadata' });
+      }
+
+      if (!productId) {
+        console.error('[PAYMENT CALLBACK] No productId in session metadata');
+        return res.status(400).json({ error: 'No productId in session metadata' });
+      }
+
+      try {
+        await handlePaymentSuccess(userId, productId, amount, currency, session_id);
+        console.log('[PAYMENT CALLBACK] Payment processing completed successfully');
+      } catch (error) {
+        console.error('[PAYMENT CALLBACK] Failed to save payment details:', error);
+        return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to save payment details' });
+      }
+    }
+    
     res.redirect('/payment/success?session_id=' + encodeURIComponent(session_id));
   } catch (error) {
-    console.error('Payment callback error:', error);
+    console.error('[PAYMENT CALLBACK] Error:', error);
     res.status(400).json({ error: 'Callback processing error' });
+  }
+});
+
+/**
+ * Helper function to create access tokens and purchase record
+ */
+async function handlePaymentSuccess(
+  userId,
+  productId,
+  amount,
+  currency,
+  stripeSessionId
+) {
+  try {
+    console.log('[PAYMENT CALLBACK] handlePaymentSuccess called:', {
+      userId,
+      productId,
+      amount,
+      currency,
+      stripeSessionId,
+    });
+
+    // 0. Ensure user exists
+    console.log('[PAYMENT CALLBACK] Ensuring user exists...');
+    const userExists = await ensureUserExists(userId);
+    if (!userExists) {
+      throw new Error('Failed to ensure user exists in database');
+    }
+
+    // 1. Save purchase record
+    console.log('[PAYMENT CALLBACK] Saving purchase record...');
+    const { data: purchase, error: purchaseError } = await supabaseAdmin
+      .from('purchases')
+      .insert({
+        user_id: userId,
+        product_id: productId,
+        amount,
+        currency,
+        stripe_session_id: stripeSessionId,
+        status: 'completed',
+      })
+      .select()
+      .single();
+
+    if (purchaseError) {
+      console.error('[PAYMENT CALLBACK] Error saving purchase:', purchaseError);
+      throw purchaseError;
+    }
+
+    console.log('[PAYMENT CALLBACK] Purchase saved:', purchase);
+
+    // 2. Create VPN client for VPN products FIRST (to get real expiration)
+    const isVpnProduct = productId.startsWith('vpn-');
+    let vpnExpiresAt = null;
+    if (isVpnProduct) {
+      console.log('[PAYMENT CALLBACK] Creating VPN client for product:', productId);
+      try {
+        // Get user email from Supabase
+        const { data: userData, error: userError } = await supabaseAdmin
+          .from('users')
+          .select('email')
+          .eq('id', userId)
+          .single();
+
+        if (userError || !userData?.email) {
+          console.error('[PAYMENT CALLBACK] Could not get user email for VPN creation:', userError);
+        } else {
+          try {
+            // Call VPN API endpoint via HTTP instead of importing the service
+            const apiBaseUrl = `http://localhost:${PORT}`;
+            
+            console.log('[PAYMENT CALLBACK] Calling VPN API endpoint:', `${apiBaseUrl}/api/vpn/create`);
+            
+            const response = await fetch(`${apiBaseUrl}/api/vpn/create`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                userId,
+                email: userData.email,
+                productId,
+                sessionId: stripeSessionId,
+              }),
+            });
+
+            const vpnResult = await response.json();
+            console.log('[PAYMENT CALLBACK] VPN API response:', vpnResult);
+
+            if (vpnResult.success) {
+              console.log('[PAYMENT CALLBACK] VPN client created successfully:', vpnResult.client?.id);
+              // Use the real VPN expiration from X-UI
+              vpnExpiresAt = vpnResult.client?.expires_at || null;
+            } else {
+              console.error('[PAYMENT CALLBACK] Failed to create VPN client:', vpnResult.error);
+            }
+          } catch (apiError) {
+            console.error('[PAYMENT CALLBACK] Failed to call VPN API:', apiError);
+          }
+        }
+      } catch (vpnError) {
+        console.error('[PAYMENT CALLBACK] Error creating VPN client:', vpnError);
+        // Don't fail the entire payment if VPN creation fails
+      }
+    }
+
+    // 3. Create access token with expiration based on product type
+    const expiryDays = getExpiryDaysForProduct(productId);
+    const now = new Date();
+
+    // For VPN products: use the real expiration from X-UI
+    // For other products (PDF guide): calculate expiration immediately
+    let expiresAt = null;
+    if (isVpnProduct) {
+      // Use the VPN's actual expiration
+      expiresAt = vpnExpiresAt;
+    } else {
+      // Today (purchase day) is FREE. Next X days are paid. Expires at 00:00 after paid days.
+      const expirationDate = new Date(now);
+      expirationDate.setDate(expirationDate.getDate() + expiryDays + 1);
+      expirationDate.setHours(0, 0, 0, 0);
+      expiresAt = expirationDate.toISOString();
+    }
+
+    const token = generateAccessToken();
+    console.log('[PAYMENT CALLBACK] Creating access token:', {
+      productId,
+      isVpnProduct,
+      expiryDays,
+      expiresAt: expiresAt ? `Set to ${expiresAt}` : 'NULL',
+    });
+
+    const { data: accessToken, error: tokenError } = await supabaseAdmin
+      .from('access_tokens')
+      .insert({
+        user_id: userId,
+        product_id: productId,
+        token,
+        purchase_date: now.toISOString(),
+        expires_at: expiresAt,
+        activated_at: now.toISOString(), // VPN is immediately activated on payment
+      })
+      .select()
+      .single();
+
+    if (tokenError) {
+      console.error('[PAYMENT CALLBACK] Error creating access token:', tokenError);
+      throw tokenError;
+    }
+
+    console.log('[PAYMENT CALLBACK] Payment processed successfully:', {
+      purchaseId: purchase.id,
+      tokenId: accessToken.id,
+      productId,
+    });
+
+    return { purchase, accessToken };
+  } catch (error) {
+    console.error('[PAYMENT CALLBACK] Error in handlePaymentSuccess:', error);
+    throw error;
+  }
+}
+
+/**
+ * Ensure user exists in the users table
+ */
+async function ensureUserExists(userId) {
+  try {
+    // Check if user already exists
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (existingUser) {
+      console.log('[PAYMENT CALLBACK] User already exists:', userId);
+      return true;
+    }
+
+    // If user doesn't exist, create a placeholder user
+    console.log('[PAYMENT CALLBACK] User does not exist, creating placeholder user:', userId);
+    const { error: insertError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: userId,
+        email: `user-${userId}@placeholder.local`,
+        username: `User-${userId.slice(0, 8)}`,
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('[PAYMENT CALLBACK] Error creating placeholder user:', insertError);
+      return false;
+    }
+
+    console.log('[PAYMENT CALLBACK] Placeholder user created successfully');
+    return true;
+  } catch (error) {
+    console.error('[PAYMENT CALLBACK] Error in ensureUserExists:', error);
+    return false;
+  }
+}
+
+/**
+ * Get expiry days for a product
+ */
+function getExpiryDaysForProduct(productId) {
+  const productDays = {
+    'vpn-3days': 3,
+    'vpn-7days': 7,
+    'vpn-14days': 14,
+    'vpn-30days': 30,
+    'payment-guide': 365,
+  };
+  return productDays[productId] || 7;
+}
+
+/**
+ * Generate access token
+ */
+function generateAccessToken() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
+  for (let i = 0; i < 64; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return token;
+}
+
+// VPN API Routes - for local development
+app.post('/api/vpn/create', async (req, res) => {
+  try {
+    const { userId, email, productId, sessionId } = req.body;
+    
+    console.log('[VPN API] Create VPN client request:', { userId, email, productId });
+    
+    // Validate required fields
+    if (!userId || !email || !productId) {
+      return res.status(400).json({
+        error: 'Missing required fields',
+        required: ['userId', 'email', 'productId']
+      });
+    }
+    
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+    
+    // Validate product ID
+    if (!productId.startsWith('vpn-')) {
+      return res.status(400).json({ error: 'Invalid product ID' });
+    }
+    
+    // Import and call the VPN service
+    const { createVpnClient } = await import('./services/vpnClientService.js');
+    const result = await createVpnClient({
+      userId,
+      email,
+      productId,
+      sessionId: sessionId || ''
+    });
+    
+    if (!result.success) {
+      console.error('[VPN API] Failed to create VPN client:', result.error);
+      return res.status(400).json({ 
+        error: result.error,
+        details: result.details,
+        code: result.code
+      });
+    }
+    
+    console.log('[VPN API] VPN client created successfully:', result.client?.id);
+    
+    return res.status(200).json({
+      success: true,
+      client: {
+        id: result.client?.id,
+        vlessUrl: result.client?.vless_url,
+        productId: result.client?.product_id,
+        expiryDays: result.client?.expiry_days,
+        status: result.client?.status,
+      }
+    });
+  } catch (error) {
+    console.error('[VPN API] Error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.post('/api/vpn/list', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId' });
+    }
+    
+    const { getUserVpnClients } = await import('./services/vpnClientService.js');
+    const clients = await getUserVpnClients(userId);
+    
+    return res.status(200).json({
+      success: true,
+      clients
+    });
+  } catch (error) {
+    console.error('[VPN API] Error listing clients:', error);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

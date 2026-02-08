@@ -8,10 +8,10 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// utils/logger.ts
+// utils/logger.js
 var isDevelopment, logger;
 var init_logger = __esm({
-  "utils/logger.ts"() {
+  "utils/logger.js"() {
     isDevelopment = false;
     logger = {
       log: (...args) => {
@@ -309,32 +309,56 @@ var init_emailService = __esm({
   }
 });
 
-// services/supabaseService.ts
-init_logger();
+// services/supabaseClient.js
 import { createClient } from "@supabase/supabase-js";
-
-// utils/sessionManager.ts
-init_logger();
-var SESSION_EXPIRATION_TIME = 24 * 60 * 60 * 1e3;
-
-// services/supabaseService.ts
-var supabaseUrl = process.env.VITE_SUPABASE_URL;
-var supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase configuration. Please check your environment variables.");
+var supabaseUrl = (typeof __SUPABASE_URL__ !== "undefined" ? __SUPABASE_URL__ : "") || process.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+var supabaseAnonKey = (typeof __SUPABASE_ANON_KEY__ !== "undefined" ? __SUPABASE_ANON_KEY__ : "") || import.meta?.env?.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+var supabaseInstance = null;
+function getSupabaseClient() {
+  if (!supabaseInstance) {
+    const url = supabaseUrl || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const key = supabaseAnonKey || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+    if (!url || !key) {
+      throw new Error("Missing Supabase configuration");
+    }
+    supabaseInstance = createClient(url, key);
+  }
+  return supabaseInstance;
 }
-var supabase = createClient(supabaseUrl, supabaseAnonKey);
+var supabase = getSupabaseClient();
 
 // services/adminService.ts
 init_logger();
 
-// utils/vlessParser.ts
-init_logger();
+// utils/vlessParser.js
+var isDevelopment2 = false;
+var logger2 = {
+  log: (...args) => {
+    if (isDevelopment2) {
+      console.log(...args);
+    }
+  },
+  error: (...args) => {
+    if (isDevelopment2) {
+      console.error(...args);
+    }
+  },
+  warn: (...args) => {
+    if (isDevelopment2) {
+      console.warn(...args);
+    }
+  },
+  info: (...args) => {
+    if (isDevelopment2) {
+      console.info(...args);
+    }
+  }
+};
 function parseVlessUrl(urlString) {
   try {
     urlString = urlString.trim();
     if (!urlString.startsWith("vless://")) {
-      logger.error("Invalid VLESS URL: does not start with vless://");
+      logger2.error("Invalid VLESS URL: does not start with vless://");
       return null;
     }
     let urlWithoutScheme = urlString.slice(8);
@@ -355,7 +379,7 @@ function parseVlessUrl(urlString) {
     }
     const authorityMatch = authority.match(/^([^@]+)@([^:]+):(\d+)$/);
     if (!authorityMatch) {
-      logger.error("Invalid VLESS URL authority format:", authority);
+      logger2.error("Invalid VLESS URL authority format:", authority);
       return null;
     }
     const uuid = authorityMatch[1];
@@ -379,7 +403,7 @@ function parseVlessUrl(urlString) {
     };
     return config;
   } catch (error) {
-    logger.error("Error parsing VLESS URL:", error);
+    logger2.error("Error parsing VLESS URL:", error);
     return null;
   }
 }

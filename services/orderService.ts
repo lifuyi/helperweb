@@ -1,20 +1,18 @@
 import { supabase } from './supabaseClient.js';
 import { Purchase } from './paymentService.js';
-import { AccessToken } from './userService.js';
 import { logger } from '../utils/logger.js';
 
 /**
- * Order details interface combining purchase and access token info
+ * Order details interface combining purchase and VPN URL info
  */
 export interface OrderDetails extends Purchase {
-  access_tokens: AccessToken[];
   vpn_urls: any[]; // VPN URLs from vpn_urls table
   product_name: string;
   status_display: string;
 }
 
 /**
- * Get all orders for a user with their access tokens and product details
+ * Get all orders for a user with their VPN URLs and product details
  */
 export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
   try {
@@ -37,28 +35,10 @@ export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
       return [];
     }
 
-    // For each purchase, fetch its access tokens and VPN URLs
+    // For each purchase, fetch VPN URLs
     const ordersWithTokens = await Promise.all(
       purchases.map(async (purchase) => {
-        const { data: tokens, error: tokenError } = await supabase
-          .from('access_tokens')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('product_id', purchase.product_id)
-          .order('created_at', { ascending: false });
-
-        if (tokenError) {
-          logger.error('Error fetching tokens for purchase:', tokenError);
-          return {
-            ...purchase,
-            access_tokens: [],
-            product_name: getProductName(purchase.product_id),
-            status_display: getStatusDisplay(purchase.status),
-            vpn_urls: [], // Added for consistency
-          };
-        }
-
-        // Also fetch VPN URLs for VPN products via backend API
+        // Fetch VPN URLs for VPN products via backend API
         let vpnUrls: any[] = [];
         if (purchase.product_id.startsWith('vpn-')) {
           try {
@@ -78,7 +58,6 @@ export async function getUserOrders(userId: string): Promise<OrderDetails[]> {
 
         return {
           ...purchase,
-          access_tokens: tokens || [],
           vpn_urls: vpnUrls,
           product_name: getProductName(purchase.product_id),
           status_display: getStatusDisplay(purchase.status),
@@ -136,13 +115,6 @@ export async function getOrderDetails(
 }
 
 /**
- * Generate VPN access URL from token
- */
-export function generateVpnUrl(token: string, baseUrl: string = window.location.origin): string {
-  return `${baseUrl}/access?token=${token}`;
-}
-
-/**
  * Get product name from product ID
  */
 function getProductName(productId: string): string {
@@ -168,14 +140,6 @@ function getStatusDisplay(status: string): string {
   };
 
   return statusMap[status] || status;
-}
-
-/**
- * Check if a token is still active (not expired)
- */
-export function isTokenActive(token: AccessToken): boolean {
-  if (!token.expires_at) return false;
-  return new Date(token.expires_at) > new Date();
 }
 
 /**

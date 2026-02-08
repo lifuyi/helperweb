@@ -1,4 +1,4 @@
-// utils/logger.ts
+// utils/logger.js
 var isDevelopment = false;
 var logger = {
   log: (...args) => {

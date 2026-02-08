@@ -8739,7 +8739,7 @@ var require_shared = __commonJS({
       });
       return options;
     };
-    module.exports._logFunc = (logger2, level, defaults, data, message, ...args) => {
+    module.exports._logFunc = (logger5, level, defaults, data, message, ...args) => {
       let entry = {};
       Object.keys(defaults || {}).forEach((key) => {
         if (key !== "level") {
@@ -8751,7 +8751,7 @@ var require_shared = __commonJS({
           entry[key] = data[key];
         }
       });
-      logger2[level](entry, message, ...args);
+      logger5[level](entry, message, ...args);
     };
     module.exports.getLogger = (options, defaults) => {
       options = options || {};
@@ -8763,13 +8763,13 @@ var require_shared = __commonJS({
         });
         return response;
       }
-      let logger2 = options.logger;
+      let logger5 = options.logger;
       if (options.logger === true) {
-        logger2 = createDefaultLogger(levels);
+        logger5 = createDefaultLogger(levels);
       }
       levels.forEach((level) => {
         response[level] = (data, message, ...args) => {
-          module.exports._logFunc(logger2, level, defaults, data, message, ...args);
+          module.exports._logFunc(logger5, level, defaults, data, message, ...args);
         };
       });
       return response;
@@ -8972,11 +8972,11 @@ var require_shared = __commonJS({
           console.log("[%s] %s %s", (/* @__PURE__ */ new Date()).toISOString().substr(0, 19).replace(/T/, " "), levelNames.get(level), prefix + line);
         });
       };
-      let logger2 = {};
+      let logger5 = {};
       levels.forEach((level) => {
-        logger2[level] = print.bind(null, level);
+        logger5[level] = print.bind(null, level);
       });
-      return logger2;
+      return logger5;
     }
   }
 });
@@ -16621,7 +16621,7 @@ var require_xoauth2 = __commonJS({
     var crypto2 = __require("crypto");
     var shared = require_shared();
     var XOAuth2 = class extends Stream {
-      constructor(options, logger2) {
+      constructor(options, logger5) {
         super();
         this.options = options || {};
         if (options && options.serviceClient) {
@@ -16634,7 +16634,7 @@ var require_xoauth2 = __commonJS({
         }
         this.logger = shared.getLogger(
           {
-            logger: logger2
+            logger: logger5
           },
           {
             component: this.options.component || "OAuth2"
@@ -23738,8 +23738,8 @@ function applySettingDefaults(options, defaults) {
   else delete result.accessToken;
   return result;
 }
-function validateSupabaseUrl(supabaseUrl2) {
-  const trimmedUrl = supabaseUrl2 === null || supabaseUrl2 === void 0 ? void 0 : supabaseUrl2.trim();
+function validateSupabaseUrl(supabaseUrl) {
+  const trimmedUrl = supabaseUrl === null || supabaseUrl === void 0 ? void 0 : supabaseUrl.trim();
   if (!trimmedUrl) throw new Error("supabaseUrl is required.");
   if (!trimmedUrl.match(/^https?:\/\//i)) throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.");
   try {
@@ -23774,11 +23774,11 @@ var SupabaseClient = class {
   * const { data } = await supabase.from('profiles').select('*')
   * ```
   */
-  constructor(supabaseUrl2, supabaseKey, options) {
+  constructor(supabaseUrl, supabaseKey, options) {
     var _settings$auth$storag, _settings$global$head;
-    this.supabaseUrl = supabaseUrl2;
+    this.supabaseUrl = supabaseUrl;
     this.supabaseKey = supabaseKey;
-    const baseUrl = validateSupabaseUrl(supabaseUrl2);
+    const baseUrl = validateSupabaseUrl(supabaseUrl);
     if (!supabaseKey) throw new Error("supabaseKey is required.");
     this.realtimeUrl = new URL("realtime/v1", baseUrl);
     this.realtimeUrl.protocol = this.realtimeUrl.protocol.replace("http", "ws");
@@ -23954,8 +23954,8 @@ var SupabaseClient = class {
     }
   }
 };
-var createClient = (supabaseUrl2, supabaseKey, options) => {
-  return new SupabaseClient(supabaseUrl2, supabaseKey, options);
+var createClient = (supabaseUrl, supabaseKey, options) => {
+  return new SupabaseClient(supabaseUrl, supabaseKey, options);
 };
 function shouldShowDeprecationWarning() {
   if (typeof window !== "undefined") return false;
@@ -23969,8 +23969,9 @@ function shouldShowDeprecationWarning() {
 }
 if (shouldShowDeprecationWarning()) console.warn("\u26A0\uFE0F  Node.js 18 and below are deprecated and will no longer be supported in future versions of @supabase/supabase-js. Please upgrade to Node.js 20 or later. For more information, visit: https://github.com/orgs/supabase/discussions/37217");
 
-// utils/logger.ts
-var isDevelopment = import.meta.env.DEV;
+// services/vpnClientService.js
+var import_nodemailer = __toESM(require_nodemailer(), 1);
+var isDevelopment = false;
 var logger = {
   log: (...args) => {
     if (isDevelopment) {
@@ -23993,8 +23994,6 @@ var logger = {
     }
   }
 };
-
-// services/xuiClient.ts
 var XuiApiClient = class {
   constructor(config) {
     this.cookie = null;
@@ -24005,30 +24004,41 @@ var XuiApiClient = class {
    */
   async login() {
     try {
+      console.log("[X-UI] Attempting login to:", `${this.config.baseUrl}/login`);
       const response = await fetch(`${this.config.baseUrl}/login`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json, text/plain, */*",
+          "X-Requested-With": "XMLHttpRequest"
         },
         body: new URLSearchParams({
           username: this.config.username,
           password: this.config.password
         })
       });
+      console.log("[X-UI] Login response status:", response.status, response.statusText);
       if (!response.ok) {
+        const errorText = await response.text().catch(() => "No error body");
         logger.error("X-UI login failed:", response.statusText);
+        console.error("[X-UI] Login error body:", errorText);
         return false;
       }
       const setCookie = response.headers.get("set-cookie");
+      console.log("[X-UI] Set-Cookie header:", setCookie ? "Present" : "Missing");
       if (setCookie) {
         this.cookie = setCookie.split(";")[0];
+        console.log("[X-UI] Cookie extracted:", this.cookie.substring(0, 20) + "...");
         logger.log("X-UI login successful");
         return true;
       }
+      const responseText = await response.text();
+      console.log("[X-UI] Login response body preview:", responseText.substring(0, 200));
       logger.error("No cookie in X-UI login response");
       return false;
     } catch (error) {
       logger.error("X-UI login error:", error);
+      console.error("[X-UI] Login exception:", error);
       return false;
     }
   }
@@ -24040,11 +24050,14 @@ var XuiApiClient = class {
       const loggedIn = await this.login();
       if (!loggedIn) {
         logger.error("Not authenticated to X-UI");
+        console.error("[X-UI] Login failed, cannot make request");
         return null;
       }
     }
     try {
-      const response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+      const url = `${this.config.baseUrl}${endpoint}`;
+      console.log("[X-UI] Making request to:", url);
+      const response = await fetch(url, {
         ...options,
         headers: {
           "Content-Type": "application/json",
@@ -24052,7 +24065,9 @@ var XuiApiClient = class {
           ...options.headers
         }
       });
+      console.log("[X-UI] Response status:", response.status, response.statusText);
       if (response.status === 401 || response.status === 403) {
+        console.log("[X-UI] Session expired, re-logging in...");
         this.cookie = null;
         const loggedIn = await this.login();
         if (!loggedIn) {
@@ -24061,12 +24076,17 @@ var XuiApiClient = class {
         return this.request(endpoint, options);
       }
       if (!response.ok) {
-        logger.error(`X-UI API error: ${response.statusText}`);
+        const errorText = await response.text();
+        logger.error(`X-UI API error: ${response.status} ${response.statusText}`);
+        console.error("[X-UI] Error response body:", errorText);
         return null;
       }
-      return await response.json();
+      const data = await response.json();
+      console.log("[X-UI] Response data:", data);
+      return data;
     } catch (error) {
       logger.error(`X-UI API request failed:`, error);
+      console.error("[X-UI] Request error:", error);
       return null;
     }
   }
@@ -24102,6 +24122,35 @@ var XuiApiClient = class {
     }
   }
   /**
+   * Find an existing client by email
+   * @param email - Client email to search for
+   */
+  async findClientByEmail(email) {
+    const inbounds = await this.getInbounds();
+    for (const inbound of inbounds) {
+      const clients = this.getClientsFromInbound(inbound);
+      const existingClient = clients.find((c) => c.email === email);
+      if (existingClient) {
+        console.log("[X-UI] Found existing client by email:", {
+          email,
+          uuid: existingClient.id,
+          inboundId: inbound.id
+        });
+        return {
+          id: inbound.id,
+          enable: existingClient.enable,
+          email: existingClient.email,
+          uuid: existingClient.id,
+          limitIp: existingClient.limitIp,
+          totalGB: existingClient.totalGB,
+          expiryTime: existingClient.expiryTime,
+          subId: existingClient.subId
+        };
+      }
+    }
+    return null;
+  }
+  /**
    * Create a new client for an inbound
    * @param inboundId - The inbound (port) ID to add client to
    * @param email - Client identifier (usually user's email)
@@ -24110,31 +24159,46 @@ var XuiApiClient = class {
    */
   async createClient(inboundId, email, expiryDays = 30, limitIp = 1) {
     const uuid = crypto.randomUUID();
-    const expiryTime = expiryDays > 0 ? Math.floor(Date.now() / 1e3) + expiryDays * 24 * 60 * 60 : 0;
-    const clientData = {
-      id: inboundId,
-      settings: JSON.stringify({
-        clients: [
-          {
-            id: uuid,
-            email,
-            limitIp,
-            totalGB: 0,
-            expiryTime,
-            enable: true,
-            tgId: "",
-            subId: ""
-          }
-        ]
-      })
+    const subId = crypto.randomUUID().replace(/-/g, "").substring(0, 16);
+    const now = /* @__PURE__ */ new Date();
+    const expiryDate = new Date(now);
+    expiryDate.setDate(expiryDate.getDate() + expiryDays + 1);
+    expiryDate.setHours(0, 0, 0, 0);
+    const expiryTime = expiryDays > 0 ? expiryDate.getTime() : 0;
+    const settingsData = {
+      clients: [{
+        id: uuid,
+        flow: "",
+        email,
+        limitIp,
+        totalGB: 107374182400,
+        expiryTime,
+        enable: true,
+        tgId: "",
+        subId,
+        comment: "",
+        reset: 0
+      }]
     };
+    const formData = new URLSearchParams();
+    formData.append("id", inboundId.toString());
+    formData.append("settings", JSON.stringify(settingsData));
+    console.log("[X-UI] Creating client with form data:", {
+      id: inboundId,
+      settings: JSON.stringify(settingsData, null, 2)
+    });
+    console.log("[X-UI] Calculated expiry:", new Date(expiryTime).toISOString());
     const response = await this.request(
       "/panel/api/inbounds/addClient",
       {
         method: "POST",
-        body: JSON.stringify(clientData)
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: formData.toString()
       }
     );
+    console.log("[X-UI] Create client response:", response);
     if (response?.success) {
       logger.log(`X-UI client created: ${email}`);
       return {
@@ -24143,12 +24207,13 @@ var XuiApiClient = class {
         email,
         uuid,
         limitIp,
-        totalGB: 0,
+        totalGB: 100,
         expiryTime,
-        subId: ""
+        subId
       };
     }
-    logger.error(`Failed to create X-UI client: ${response?.msg}`);
+    logger.error(`Failed to create X-UI client: ${response?.msg || "Unknown error"}`);
+    console.error("[X-UI] Full response:", response);
     return null;
   }
   /**
@@ -24245,8 +24310,29 @@ var XuiApiClient = class {
     return null;
   }
 };
-
-// utils/vlessGenerator.ts
+var isDevelopment2 = false;
+var logger2 = {
+  log: (...args) => {
+    if (isDevelopment2) {
+      console.log(...args);
+    }
+  },
+  error: (...args) => {
+    if (isDevelopment2) {
+      console.error(...args);
+    }
+  },
+  warn: (...args) => {
+    if (isDevelopment2) {
+      console.warn(...args);
+    }
+  },
+  info: (...args) => {
+    if (isDevelopment2) {
+      console.info(...args);
+    }
+  }
+};
 function generateVlessUrl(config) {
   const {
     uuid,
@@ -24304,7 +24390,7 @@ function generateVlessUrlFromXui(inboundHost, inboundPort, clientUuid, clientEma
 function parseVlessUrl(urlString) {
   try {
     if (!urlString.startsWith("vless://")) {
-      logger.error("Invalid VLESS URL: must start with vless://");
+      logger2.error("Invalid VLESS URL: must start with vless://");
       return null;
     }
     let remainder = urlString.slice(8);
@@ -24326,7 +24412,7 @@ function parseVlessUrl(urlString) {
     }
     const authorityMatch = authority.match(/^([^@]+)@([^:]+):(\d+)$/);
     if (!authorityMatch) {
-      logger.error("Invalid VLESS authority format:", authority);
+      logger2.error("Invalid VLESS authority format:", authority);
       return null;
     }
     const uuid = authorityMatch[1];
@@ -24348,13 +24434,10 @@ function parseVlessUrl(urlString) {
       remark
     };
   } catch (error) {
-    logger.error("Error parsing VLESS URL:", error);
+    logger2.error("Error parsing VLESS URL:", error);
     return null;
   }
 }
-
-// api/email/send/vpn.ts
-var import_nodemailer = __toESM(require_nodemailer(), 1);
 function createEmailTransporter() {
   const config = {
     host: process.env.SMTP_HOST || "",
@@ -24534,8 +24617,29 @@ async function sendVpnCredentialsEmail(data) {
     return false;
   }
 }
-
-// config/products.js
+var isDevelopment3 = false;
+var logger3 = {
+  log: (...args) => {
+    if (isDevelopment3) {
+      console.log(...args);
+    }
+  },
+  error: (...args) => {
+    if (isDevelopment3) {
+      console.error(...args);
+    }
+  },
+  warn: (...args) => {
+    if (isDevelopment3) {
+      console.warn(...args);
+    }
+  },
+  info: (...args) => {
+    if (isDevelopment3) {
+      console.info(...args);
+    }
+  }
+};
 var DEFAULT_PRODUCTS = {
   "vpn-3days": {
     price_cents: 499,
@@ -24611,37 +24715,67 @@ if (typeof window !== "undefined") {
 function getExpiryDaysForProduct(productId) {
   return PRODUCTS[productId]?.expiry_days || 30;
 }
-
-// services/vpnClientService.ts
-var supabaseUrl = process.env.VITE_SUPABASE_URL;
-var supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-var supabase = supabaseUrl && supabaseServiceKey ? createClient(supabaseUrl, supabaseServiceKey) : null;
+function getSupabaseServiceClient() {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    console.error("[VPN] Missing Supabase service role configuration");
+    throw new Error("Supabase service role configuration missing");
+  }
+  return createClient(url, key);
+}
+var supabase = getSupabaseServiceClient();
+async function ensureUserExists(userId, email) {
+  try {
+    const { data: existingUser } = await supabase.from("users").select("id").eq("id", userId).single();
+    if (!existingUser) {
+      console.log("[VPN] Creating placeholder user:", userId);
+      const { error: insertError } = await supabase.from("users").insert({
+        id: userId,
+        email,
+        username: email.split("@")[0]
+      });
+      if (insertError) {
+        console.error("[VPN] Failed to create placeholder user:", insertError);
+        throw insertError;
+      }
+      console.log("[VPN] Placeholder user created successfully");
+    }
+  } catch (error) {
+    console.error("[VPN] Error in ensureUserExists:", error);
+    throw error;
+  }
+}
 async function createVpnClient(request) {
   const { userId, email, productId, sessionId } = request;
   try {
     console.log("[VPN] createVpnClient called:", { userId, email, productId, sessionId });
+    await ensureUserExists(userId, email);
     const expiryDays = getExpiryDaysForProduct(productId);
     console.log("[VPN] Product expiry days:", { productId, expiryDays });
     if (expiryDays <= 0) {
       console.error("[VPN] Invalid expiry days:", expiryDays);
       return { success: false, error: "Invalid product" };
     }
-    console.log("[VPN] Checking for existing VPN client");
-    const existing = await getUserVpnClient(userId, productId);
-    if (existing) {
-      console.log("[VPN] VPN client already exists for this product");
-      return { success: false, error: "VPN client already exists for this product" };
-    }
-    console.log("[VPN] No existing client, proceeding with creation");
+    const uniqueEmail = `vpn-${sessionId.substring(0, 8)}@${email.split("@")[1]}`;
+    console.log("[VPN] Generated unique VPN client email:", uniqueEmail);
+    console.log("[VPN] Proceeding to create new VPN client");
     console.log("[VPN] Calling createXuiClientWithExpiration");
-    const xuiResult = await createXuiClientWithExpiration(email, expiryDays);
+    const xuiResult = await createXuiClientWithExpiration(uniqueEmail, expiryDays);
     if (!xuiResult) {
       console.error("[VPN] X-UI client creation returned null");
       return { success: false, error: "Failed to create X-UI client" };
     }
     console.log("[VPN] X-UI client created:", xuiResult);
-    const expiresAt = /* @__PURE__ */ new Date();
-    expiresAt.setDate(expiresAt.getDate() + expiryDays);
+    let expiresAt = null;
+    if (xuiResult.expiryTime && xuiResult.expiryTime > 0) {
+      expiresAt = new Date(xuiResult.expiryTime).toISOString();
+    } else if (expiryDays > 0) {
+      const expiryDate = /* @__PURE__ */ new Date();
+      expiryDate.setDate(expiryDate.getDate() + expiryDays + 1);
+      expiryDate.setHours(0, 0, 0, 0);
+      expiresAt = expiryDate.toISOString();
+    }
     const inboundHost = process.env.VPN_SERVER_HOST || "vpn.example.com";
     const inboundPort = parseInt(process.env.VPN_SERVER_PORT || "443");
     const security = process.env.VPN_SECURITY || "reality";
@@ -24650,7 +24784,7 @@ async function createVpnClient(request) {
       inboundHost,
       inboundPort,
       xuiResult.uuid,
-      email,
+      uniqueEmail,
       {
         security,
         sni,
@@ -24659,7 +24793,8 @@ async function createVpnClient(request) {
     );
     const parsedUrl = parseVlessUrl(vlessUrl);
     const { data: vpnClient, error: dbError } = await supabase?.from("vpn_urls").insert({
-      user_id: userId,
+      assigned_to_user_id: userId,
+      url: vlessUrl,
       vless_url: vlessUrl,
       vless_uuid: xuiResult.uuid,
       vless_host: inboundHost,
@@ -24673,15 +24808,29 @@ async function createVpnClient(request) {
       security_type: security,
       fingerprint: "chrome",
       sni,
-      vless_name: email,
+      vless_name: uniqueEmail,
       status: "active",
       is_active: true,
-      expires_at: expiresAt.toISOString()
+      expires_at: expiresAt
     }).select().single();
     if (dbError || !vpnClient) {
-      logger.error("Failed to save VPN client:", dbError);
+      console.error("[VPN] Database error details:", {
+        message: dbError?.message,
+        code: dbError?.code,
+        details: dbError?.details,
+        hint: dbError?.hint,
+        userId,
+        productId,
+        xuiResult
+      });
+      logger3.error("Failed to save VPN client:", dbError);
       await cleanupXuiClient(xuiResult.inboundId, xuiResult.uuid);
-      return { success: false, error: "Failed to save VPN client" };
+      return {
+        success: false,
+        error: "Failed to save VPN client",
+        details: dbError?.message || "Unknown database error",
+        code: dbError?.code
+      };
     }
     const emailSent = await sendVpnCredentialsEmail({
       userEmail: email,
@@ -24695,15 +24844,15 @@ async function createVpnClient(request) {
         port: inboundPort,
         security: process.env.VPN_SECURITY || "reality"
       },
-      expiresAt: expiresAt.toISOString()
+      expiresAt
     });
     if (!emailSent) {
-      logger.warn(`Failed to send VPN email to ${email}`);
+      logger3.warn(`Failed to send VPN email to ${email}`);
     }
-    logger.log(`VPN client created: ${vpnClient.id}`);
+    logger3.log(`VPN client created: ${vpnClient.id}`);
     return { success: true, client: vpnClient };
   } catch (error) {
-    logger.error("Error creating VPN client:", error);
+    logger3.error("Error creating VPN client:", error);
     return { success: false, error: "Internal server error" };
   }
 }
@@ -24713,7 +24862,7 @@ async function createXuiClientWithExpiration(email, expiryDays) {
     const xui = await createDefaultXuiClient();
     if (!xui) {
       console.error("[VPN] Failed to create X-UI client instance");
-      logger.error("Failed to create X-UI API client");
+      logger3.error("Failed to create X-UI API client");
       return null;
     }
     console.log("[VPN] X-UI client instance created successfully");
@@ -24722,7 +24871,7 @@ async function createXuiClientWithExpiration(email, expiryDays) {
     console.log("[VPN] Inbounds fetched:", inbounds.length, "inbound(s) available");
     if (inbounds.length === 0) {
       console.error("[VPN] No inbounds available in X-UI");
-      logger.error("No inbounds available");
+      logger3.error("No inbounds available");
       return null;
     }
     const inbound = inbounds[0];
@@ -24731,15 +24880,15 @@ async function createXuiClientWithExpiration(email, expiryDays) {
     const created = await xui.createClient(inbound.id, email, expiryDays, 1);
     console.log("[VPN] Client creation response:", created);
     if (!created) {
-      console.error("[VPN] Client creation returned null/false");
-      logger.error("Failed to create X-UI client");
+      console.error("[VPN] Client creation returned null");
+      logger3.error("Failed to create X-UI client");
       return null;
     }
-    console.log("[VPN] X-UI client created successfully:", { uuid: created.uuid, inboundId: inbound.id });
-    return { uuid: created.uuid, inboundId: inbound.id };
+    console.log("[VPN] X-UI client created successfully:", { uuid: created.uuid, inboundId: inbound.id, expiryTime: created.expiryTime });
+    return { uuid: created.uuid, inboundId: inbound.id, expiryTime: created.expiryTime };
   } catch (error) {
     console.error("[VPN] Error creating X-UI client:", error);
-    logger.error("Error creating X-UI client:", error);
+    logger3.error("Error creating X-UI client:", error);
     return null;
   }
 }
@@ -24748,7 +24897,7 @@ async function createDefaultXuiClient() {
   const username = process.env.XUI_USERNAME;
   const password = process.env.XUI_PASSWORD;
   if (!baseUrl || !username || !password) {
-    logger.warn("X-UI not configured");
+    logger3.warn("X-UI not configured");
     return null;
   }
   const client = new XuiApiClient({
@@ -24758,7 +24907,7 @@ async function createDefaultXuiClient() {
   });
   const loggedIn = await client.login();
   if (!loggedIn) {
-    logger.error("X-UI login failed");
+    logger3.error("X-UI login failed");
     return null;
   }
   return client;
@@ -24770,19 +24919,34 @@ async function cleanupXuiClient(inboundId, clientUuid) {
       await xui.deleteClient(inboundId, clientUuid);
     }
   } catch (error) {
-    logger.error("Cleanup error:", error);
+    logger3.error("Cleanup error:", error);
   }
 }
-async function getUserVpnClient(userId, productId) {
-  if (!supabase) return null;
-  try {
-    const { data, error } = await supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("product_id", productId).eq("is_active", true).maybeSingle();
-    if (error) return null;
-    return data;
-  } catch {
-    return null;
+
+// utils/logger.js
+var isDevelopment4 = false;
+var logger4 = {
+  log: (...args) => {
+    if (isDevelopment4) {
+      console.log(...args);
+    }
+  },
+  error: (...args) => {
+    if (isDevelopment4) {
+      console.error(...args);
+    }
+  },
+  warn: (...args) => {
+    if (isDevelopment4) {
+      console.warn(...args);
+    }
+  },
+  info: (...args) => {
+    if (isDevelopment4) {
+      console.info(...args);
+    }
   }
-}
+};
 
 // api/vpn/create.ts
 async function handler(req, res) {
@@ -24804,7 +24968,7 @@ async function handler(req, res) {
     if (!productId.startsWith("vpn-")) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
-    logger.log(`Creating VPN client for user ${userId}, product ${productId}`);
+    logger4.log(`Creating VPN client for user ${userId}, product ${productId}`);
     const result = await createVpnClient({
       userId,
       email,
@@ -24812,7 +24976,11 @@ async function handler(req, res) {
       sessionId: sessionId || ""
     });
     if (!result.success) {
-      return res.status(400).json({ error: result.error });
+      return res.status(400).json({
+        error: result.error,
+        details: result.details,
+        code: result.code
+      });
     }
     return res.status(200).json({
       success: true,
@@ -24825,7 +24993,7 @@ async function handler(req, res) {
       }
     });
   } catch (error) {
-    logger.error("Error in VPN create endpoint:", error);
+    logger4.error("Error in VPN create endpoint:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 }

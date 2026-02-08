@@ -1,7 +1,22 @@
-// services/supabaseService.ts
+// services/supabaseClient.js
 import { createClient } from "@supabase/supabase-js";
+var supabaseUrl = (typeof __SUPABASE_URL__ !== "undefined" ? __SUPABASE_URL__ : "") || process.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+var supabaseAnonKey = (typeof __SUPABASE_ANON_KEY__ !== "undefined" ? __SUPABASE_ANON_KEY__ : "") || import.meta?.env?.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+var supabaseInstance = null;
+function getSupabaseClient() {
+  if (!supabaseInstance) {
+    const url = supabaseUrl || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+    const key = supabaseAnonKey || process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || "";
+    if (!url || !key) {
+      throw new Error("Missing Supabase configuration");
+    }
+    supabaseInstance = createClient(url, key);
+  }
+  return supabaseInstance;
+}
+var supabase = getSupabaseClient();
 
-// utils/logger.ts
+// utils/logger.js
 var isDevelopment = false;
 var logger = {
   log: (...args) => {
@@ -26,7 +41,30 @@ var logger = {
   }
 };
 
-// utils/sessionManager.ts
+// utils/sessionManager.js
+var isDevelopment2 = false;
+var logger2 = {
+  log: (...args) => {
+    if (isDevelopment2) {
+      console.log(...args);
+    }
+  },
+  error: (...args) => {
+    if (isDevelopment2) {
+      console.error(...args);
+    }
+  },
+  warn: (...args) => {
+    if (isDevelopment2) {
+      console.warn(...args);
+    }
+  },
+  info: (...args) => {
+    if (isDevelopment2) {
+      console.info(...args);
+    }
+  }
+};
 var SESSION_STORAGE_KEY = "auth_session";
 var SESSION_EXPIRATION_TIME = 24 * 60 * 60 * 1e3;
 var sessionManager = {
@@ -42,9 +80,9 @@ var sessionManager = {
         createdAt: Date.now()
       };
       localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
-      logger.log("Session saved successfully");
+      logger2.log("Session saved successfully");
     } catch (error) {
-      logger.error("Failed to save session:", error);
+      logger2.error("Failed to save session:", error);
       throw error;
     }
   },
@@ -59,13 +97,13 @@ var sessionManager = {
       }
       const sessionData = JSON.parse(sessionStr);
       if (sessionData.expiresAt && sessionData.expiresAt < Date.now()) {
-        logger.log("Session expired, clearing");
+        logger2.log("Session expired, clearing");
         this.clearSession();
         return null;
       }
       return sessionData;
     } catch (error) {
-      logger.error("Failed to retrieve session:", error);
+      logger2.error("Failed to retrieve session:", error);
       this.clearSession();
       return null;
     }
@@ -98,9 +136,9 @@ var sessionManager = {
       localStorage.removeItem(SESSION_STORAGE_KEY);
       localStorage.removeItem("supabase_access_token");
       localStorage.removeItem("supabase_refresh_token");
-      logger.log("Session cleared");
+      logger2.log("Session cleared");
     } catch (error) {
-      logger.error("Failed to clear session:", error);
+      logger2.error("Failed to clear session:", error);
     }
   },
   /**
@@ -112,10 +150,10 @@ var sessionManager = {
       if (session) {
         session.expiresAt = Date.now() + SESSION_EXPIRATION_TIME;
         localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
-        logger.log("Session expiration refreshed");
+        logger2.log("Session expiration refreshed");
       }
     } catch (error) {
-      logger.error("Failed to refresh session expiration:", error);
+      logger2.error("Failed to refresh session expiration:", error);
     }
   },
   /**
@@ -148,24 +186,18 @@ var sessionManager = {
         this.saveSession(legacyAccessToken, legacyRefreshToken);
         localStorage.removeItem("supabase_access_token");
         localStorage.removeItem("supabase_refresh_token");
-        logger.log("Legacy tokens migrated to new session format");
+        logger2.log("Legacy tokens migrated to new session format");
         return true;
       }
       return false;
     } catch (error) {
-      logger.error("Failed to migrate legacy tokens:", error);
+      logger2.error("Failed to migrate legacy tokens:", error);
       return false;
     }
   }
 };
 
 // services/supabaseService.ts
-var supabaseUrl = process.env.VITE_SUPABASE_URL;
-var supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase configuration. Please check your environment variables.");
-}
-var supabase = createClient(supabaseUrl, supabaseAnonKey);
 async function signInWithGoogle(redirectTo) {
   let finalRedirectUrl = redirectTo;
   if (!finalRedirectUrl && typeof window !== "undefined") {
@@ -218,30 +250,51 @@ async function getSession() {
   return session;
 }
 function onAuthStateChange(callback) {
-  const session = sessionManager.getSession();
-  if (session?.accessToken && session?.refreshToken) {
-    supabase.auth.setSession({
-      access_token: session.accessToken,
-      refresh_token: session.refreshToken
-    }).catch((error) => {
-      logger.error("Failed to restore session:", error);
+  const storedSession = sessionManager.getSession();
+  if (storedSession?.accessToken && storedSession?.refreshToken) {
+    supabase.auth.getSession().then(({ data: { session: currentSession }, error: getSessionError }) => {
+      if (!getSessionError && currentSession?.user) {
+        const user = {
+          id: currentSession.user.id,
+          email: currentSession.user.email,
+          displayName: currentSession.user.user_metadata?.full_name || currentSession.user.email?.split("@")[0],
+          avatarUrl: currentSession.user.user_metadata?.avatar_url,
+          provider: currentSession.user.app_metadata?.provider
+        };
+        callback(user);
+        return;
+      }
       sessionManager.clearSession();
+      supabase.auth.setSession({
+        access_token: storedSession.accessToken,
+        refresh_token: storedSession.refreshToken
+      }).catch((error) => {
+        if (error?.message?.includes("400") || error?.status === 400) {
+          logger.log("Refresh token expired, clearing session");
+          sessionManager.clearSession();
+        } else {
+          logger.error("Failed to restore session:", error);
+        }
+      });
+    }).catch((error) => {
+      logger.error("Failed to check current session:", error);
     });
   }
   const {
     data: { subscription }
-  } = supabase.auth.onAuthStateChange(async (event, session2) => {
-    if (session2?.user) {
+  } = supabase.auth.onAuthStateChange(async (event, session) => {
+    if (session?.user) {
       sessionManager.refreshSessionExpiration();
       const user = {
-        id: session2.user.id,
-        email: session2.user.email,
-        displayName: session2.user.user_metadata?.full_name || session2.user.email?.split("@")[0],
-        avatarUrl: session2.user.user_metadata?.avatar_url,
-        provider: session2.user.app_metadata?.provider
+        id: session.user.id,
+        email: session.user.email,
+        displayName: session.user.user_metadata?.full_name || session.user.email?.split("@")[0],
+        avatarUrl: session.user.user_metadata?.avatar_url,
+        provider: session.user.app_metadata?.provider
       };
       callback(user);
     } else {
+      logger.log("Auth state changed: no session");
       callback(null);
     }
   });
@@ -270,6 +323,5 @@ export {
   onAuthStateChange,
   refreshSession,
   signInWithGoogle,
-  signOut,
-  supabase
+  signOut
 };

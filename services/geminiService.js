@@ -1,7 +1,7 @@
 // services/geminiService.ts
 import { GoogleGenAI } from "@google/genai";
 
-// utils/logger.ts
+// utils/logger.js
 var isDevelopment = false;
 var logger = {
   log: (...args) => {

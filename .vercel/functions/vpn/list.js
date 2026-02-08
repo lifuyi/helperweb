@@ -12785,15 +12785,21 @@ async function GET(request) {
       return Response.json({ error: "Server configuration error" }, { status: 500 });
     }
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    let query = supabase.from("vpn_urls").select("*").eq("user_id", userId).eq("is_active", true);
     const productId = searchParams.get("product_id");
+    console.log("Querying vpn_urls for user:", userId, "product_id:", productId);
+    let query = supabase.from("vpn_urls").select("*").eq("assigned_to_user_id", userId);
     if (productId) {
       query = query.eq("product_id", productId);
     }
     const { data: vpnUrls, error } = await query.order("created_at", { ascending: false });
     if (error) {
-      console.error("Error fetching VPN URLs:", error);
-      return Response.json({ error: "Failed to fetch VPN URLs" }, { status: 500 });
+      console.error("Error fetching VPN URLs:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint
+      });
+      return Response.json({ error: "Failed to fetch VPN URLs", details: error.message }, { status: 500 });
     }
     return Response.json({ vpn_urls: vpnUrls || [] });
   } catch (error) {
