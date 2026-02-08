@@ -3,19 +3,12 @@
  * Creates X-UI VPN clients with expiration and stores VLESS URLs
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase, getSupabaseClient } from './supabaseClient.js';
 import { XuiApiClient } from './xuiClient.js';
 import { generateVlessUrlFromXui, parseVlessUrl } from '../utils/vlessGenerator.js';
 import { sendVpnCredentialsEmail } from '../api/email/send/vpn.js';
 import { logger } from '../utils/logger.js';
 import { getExpiryDaysForProduct } from '../config/products.js';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-const supabase = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey)
-  : null;
 
 export interface VpnClientRecord {
   id: string;

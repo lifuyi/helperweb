@@ -1,4 +1,4 @@
-import { supabase } from './supabaseService.js';
+import { supabase } from './supabaseClient.js';
 import { createAccessToken, generateAccessUrl, User } from './userService.js';
 import { logger } from '../utils/logger.js';
 import { getExpiryDaysForProduct, getProductName, getProductDescription } from '../config/products.js';

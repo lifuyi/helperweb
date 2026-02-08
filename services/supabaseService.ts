@@ -1,25 +1,6 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from './supabaseClient.js';
 import { logger } from '../utils/logger.js';
 import { sessionManager } from '../utils/sessionManager.js';
-
-declare const __SUPABASE_URL__: string;
-declare const __SUPABASE_ANON_KEY__: string;
-
-const supabaseUrl = (typeof __SUPABASE_URL__ !== 'undefined' ? __SUPABASE_URL__ : '') || (import.meta as any).env?.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = (typeof __SUPABASE_ANON_KEY__ !== 'undefined' ? __SUPABASE_ANON_KEY__ : '') || (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
-
-console.log('[Supabase] Config check:', { url: supabaseUrl ? 'Set' : 'Missing', key: supabaseAnonKey ? 'Set' : 'Missing' });
-
-let supabaseInstance: SupabaseClient | null = null;
-
-if (supabaseUrl && supabaseAnonKey) {
-  supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
-  console.log('[Supabase] Client initialized successfully');
-} else {
-  console.error('[Supabase] Missing configuration. URL:', supabaseUrl, 'Key:', supabaseAnonKey ? 'Present' : 'Missing');
-}
-
-export const supabase = supabaseInstance!;
 
 export interface AuthUser {
   id: string;
@@ -133,13 +114,33 @@ export function onAuthStateChange(
 
   if (session?.accessToken && session?.refreshToken) {
     // 如果有存储的令牌，尝试恢复会话
-    supabase.auth.setSession({
-      access_token: session.accessToken,
-      refresh_token: session.refreshToken,
+    // 使用 getSession 先检查当前是否有有效会话，避免不必要的 setSession 调用
+    supabase.auth.getSession().then(({ data: { session: currentSession }, error: getSessionError }) => {
+      if (!getSessionError && currentSession?.user) {
+        // 已有有效会话，直接使用
+        const user: AuthUser = {
+          id: currentSession.user.id,
+          email: currentSession.user.email,
+          displayName: currentSession.user.user_metadata?.full_name || currentSession.user.email?.split('@')[0],
+          avatarUrl: currentSession.user.user_metadata?.avatar_url,
+          provider: currentSession.user.app_metadata?.provider,
+        };
+        callback(user);
+        return;
+      }
+
+      // 没有有效会话，尝试用存储的令牌恢复
+      supabase.auth.setSession({
+        access_token: session.accessToken,
+        refresh_token: session.refreshToken,
+      }).catch((error) => {
+        logger.error('Failed to restore session:', error);
+        // 如果恢复失败（可能是 refresh token 过期），清除存储的会话
+        // 这会触发 onAuthStateChange 的 UNAUTHORIZED 事件
+        sessionManager.clearSession();
+      });
     }).catch((error) => {
-      logger.error('Failed to restore session:', error);
-      // 如果恢复失败，清除存储的会话
-      sessionManager.clearSession();
+      logger.error('Failed to check current session:', error);
     });
   }
 

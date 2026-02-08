@@ -30,17 +30,21 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
+    optimizeDeps: {
+      esbuildOptions: {
+        // Help Vite understand React's exports
+        mainFields: ['module', 'main', 'browser'],
+      },
+    },
     build: {
-      // Code splitting to reduce bundle size
       rollupOptions: {
         output: {
           manualChunks: {
             'stripe': ['@stripe/stripe-js'],
-            'supabase': ['@supabase/supabase-js'],
             'genai': ['@google/genai'],
           }
         }
-      }
+      },
     }
   };
 });

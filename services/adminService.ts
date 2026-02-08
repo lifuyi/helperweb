@@ -1,4 +1,4 @@
-import { supabase } from './supabaseService.js';
+import { supabase } from './supabaseClient.js';
 import { Purchase } from './paymentService.js';
 import { logger } from '../utils/logger.js';
 import { parseVlessUrl } from '../utils/vlessParser.js';
