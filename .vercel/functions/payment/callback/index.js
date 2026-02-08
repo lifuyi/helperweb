@@ -25232,7 +25232,10 @@ async function GET(request) {
       metadata: session.metadata,
       amount: session.amount_total,
       currency: session.currency,
-      customerEmail: session.customer_details?.email
+      customerEmail: session.customer_details?.email,
+      customerName: session.customer_details?.name,
+      customer: session.customer,
+      customerEmailFromCustomer: session.customer?.email
     });
     if (session.payment_status === "paid") {
       const productId = session.metadata?.productId;
@@ -25256,13 +25259,15 @@ async function GET(request) {
       }
       try {
         console.log("\u{1F680} Calling handlePaymentSuccess...");
+        const customerEmail = session.customer_details?.email || session.customer?.email;
+        console.log("Using customer email:", customerEmail);
         await handlePaymentSuccess(
           userId,
           productId,
           amount,
           currency,
           sessionId,
-          session.customer_details?.email
+          customerEmail
         );
         console.log("\u2705 Payment processing completed successfully");
         return new Response(
