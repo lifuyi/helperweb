@@ -192,8 +192,10 @@ export function formatDate(dateString: string): string {
 
 /**
  * Calculate days remaining for a token
+ * Returns -1 if expiresAt is null/undefined (VPN client not yet created)
  */
-export function getDaysRemaining(expiresAt: string): number {
+export function getDaysRemaining(expiresAt: string | null): number {
+  if (!expiresAt) return -1;
   const expDate = new Date(expiresAt);
   const now = new Date();
   const diffTime = expDate.getTime() - now.getTime();

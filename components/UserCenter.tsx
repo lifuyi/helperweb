@@ -336,7 +336,9 @@ const OrderCard: React.FC<OrderCardProps> = ({
           <p className="text-slate-600 text-sm">
             {order.access_tokens.length === 0 && (!order.vpn_urls || order.vpn_urls.length === 0)
               ? 'No active access URLs available'
-              : 'All access URLs have expired'}
+              : order.access_tokens.some(t => !t.expires_at)
+                ? 'VPN client is being provisioned...'
+                : 'All access URLs have expired'}
           </p>
         </div>
       ) : (
@@ -368,7 +370,8 @@ const VpnTokenItem: React.FC<VpnTokenItemProps> = ({
   isCopied,
 }) => {
   const daysRemaining = getDaysRemaining(token.expires_at);
-  const isExpired = daysRemaining <= 0;
+  const isProvisioning = daysRemaining === -1;
+  const isExpired = !isProvisioning && daysRemaining <= 0;
 
   return (
     <div className="border border-slate-200 rounded-lg p-4 hover:border-chinaRed transition-colors">
@@ -379,14 +382,16 @@ const VpnTokenItem: React.FC<VpnTokenItemProps> = ({
               {token.token.slice(0, 12)}...{token.token.slice(-8)}
             </span>
             <span
-              className={`text-xs font-semibold px-2 py-1 rounded-full ${isExpired
-                ? 'bg-red-100 text-red-800'
-                : daysRemaining <= 3
-                  ? 'bg-amber-100 text-amber-800'
-                  : 'bg-green-100 text-green-800'
+              className={`text-xs font-semibold px-2 py-1 rounded-full ${isProvisioning
+                ? 'bg-blue-100 text-blue-800'
+                : isExpired
+                  ? 'bg-red-100 text-red-800'
+                  : daysRemaining <= 3
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-green-100 text-green-800'
                 }`}
             >
-              {isExpired ? 'Expired' : `${daysRemaining} days left`}
+              {isProvisioning ? 'Provisioning' : isExpired ? 'Expired' : `${daysRemaining} days left`}
             </span>
           </div>
           <p className="text-xs text-slate-500">
@@ -479,7 +484,8 @@ const VlessUrlItem: React.FC<VlessUrlItemProps> = ({ vpnUrl }) => {
   };
 
   const daysRemaining = getDaysRemaining(vpnUrl.expires_at);
-  const isExpired = daysRemaining <= 0;
+  const isProvisioning = daysRemaining === -1;
+  const isExpired = !isProvisioning && daysRemaining <= 0;
 
   return (
     <div className="border border-slate-200 rounded-lg p-4 hover:border-chinaRed transition-colors">
@@ -490,14 +496,16 @@ const VlessUrlItem: React.FC<VlessUrlItemProps> = ({ vpnUrl }) => {
               {vpnUrl.vless_name || vpnUrl.vless_uuid?.slice(0, 12) + '...'}
             </span>
             <span
-              className={`text-xs font-semibold px-2 py-1 rounded-full ${isExpired
-                  ? 'bg-red-100 text-red-800'
-                  : daysRemaining <= 3
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-green-100 text-green-800'
+              className={`text-xs font-semibold px-2 py-1 rounded-full ${isProvisioning
+                  ? 'bg-blue-100 text-blue-800'
+                  : isExpired
+                    ? 'bg-red-100 text-red-800'
+                    : daysRemaining <= 3
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-green-100 text-green-800'
                 }`}
             >
-              {isExpired ? 'Expired' : `${daysRemaining} days left`}
+              {isProvisioning ? 'Provisioning' : isExpired ? 'Expired' : `${daysRemaining} days left`}
             </span>
             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-semibold">
               VLESS
