@@ -2,7 +2,6 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { AuthUser, onAuthStateChange } from '../services/supabaseService';
 import { saveOrUpdateUser } from '../services/userService';
 import { logger } from '../utils/logger';
-import { sessionManager } from '../utils/sessionManager';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -60,22 +59,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     };
   }, []);
-
-  // 监听会话过期
-  useEffect(() => {
-    if (!user) return;
-
-    // 定期检查会话是否过期
-    const sessionCheckInterval = setInterval(() => {
-      if (!sessionManager.hasValidSession()) {
-        logger.log('Session expired, clearing user');
-        setUser(null);
-        clearInterval(sessionCheckInterval);
-      }
-    }, 60000); // 每分钟检查一次
-
-    return () => clearInterval(sessionCheckInterval);
-  }, [user]);
 
   const value: AuthContextType = {
     user,
