@@ -110,9 +110,9 @@ export function onAuthStateChange(
   callback: (user: AuthUser | null) => void
 ) {
   // 首先尝试恢复存储的会话
-  const session = sessionManager.getSession();
+  const storedSession = sessionManager.getSession();
 
-  if (session?.accessToken && session?.refreshToken) {
+  if (storedSession?.accessToken && storedSession?.refreshToken) {
     // 如果有存储的令牌，尝试恢复会话
     // 使用 getSession 先检查当前是否有有效会话，避免不必要的 setSession 调用
     supabase.auth.getSession().then(({ data: { session: currentSession }, error: getSessionError }) => {
@@ -130,14 +130,21 @@ export function onAuthStateChange(
       }
 
       // 没有有效会话，尝试用存储的令牌恢复
+      // 先清除旧的 session，防止自动刷新失败
+      sessionManager.clearSession();
+
       supabase.auth.setSession({
-        access_token: session.accessToken,
-        refresh_token: session.refreshToken,
-      }).catch((error) => {
-        logger.error('Failed to restore session:', error);
-        // 如果恢复失败（可能是 refresh token 过期），清除存储的会话
-        // 这会触发 onAuthStateChange 的 UNAUTHORIZED 事件
-        sessionManager.clearSession();
+        access_token: storedSession.accessToken,
+        refresh_token: storedSession.refreshToken,
+      }).catch((error: any) => {
+        // 400 Bad Request 通常表示 refresh token 已过期
+        // 此时应该清除本地会话，强制用户重新登录
+        if (error?.message?.includes('400') || error?.status === 400) {
+          logger.log('Refresh token expired, clearing session');
+          sessionManager.clearSession();
+        } else {
+          logger.error('Failed to restore session:', error);
+        }
       });
     }).catch((error) => {
       logger.error('Failed to check current session:', error);
@@ -160,6 +167,8 @@ export function onAuthStateChange(
       };
       callback(user);
     } else {
+      // 会话被清除或过期
+      logger.log('Auth state changed: no session');
       callback(null);
     }
   });
