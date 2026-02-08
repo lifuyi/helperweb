@@ -155,8 +155,8 @@ async function handlePaymentSuccess(
           try {
             // Directly call the VPN creation function instead of HTTP API call
             // This avoids the serverless function self-call issue
-            console.log('Importing vpnClientService from ../../services/vpnClientService.js');
-            const { createVpnClient } = await import('../../services/vpnClientService.js');
+            console.log('Importing vpnClientService from ../../../services/vpnClientService.js');
+            const { createVpnClient } = await import('../../../services/vpnClientService.js');
             console.log('Successfully imported createVpnClient function');
             
             console.log('Calling createVpnClient with:', { 
