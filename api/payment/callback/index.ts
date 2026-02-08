@@ -136,6 +136,8 @@ async function handlePaymentSuccess(
 
     // 2. Create VPN client for VPN products FIRST (to get real expiration)
     const isVpnProduct = productId.startsWith('vpn-');
+    console.log('[PAYMENT] Product type check:', { productId, isVpnProduct });
+    
     let vpnExpiresAt: string | null = null;
     if (isVpnProduct) {
       console.log('Creating VPN client for product:', productId);
@@ -186,9 +188,11 @@ async function handlePaymentSuccess(
           }
         }
       } catch (vpnError) {
-        console.error('Error creating VPN client:', vpnError);
+        console.error('❌ Error creating VPN client:', vpnError);
         // Don't fail the entire payment if VPN creation fails
       }
+    } else {
+      console.log('[PAYMENT] Skipping VPN creation - not a VPN product:', productId);
     }
 
     // 3. Create access token with expiration based on product type
@@ -275,6 +279,10 @@ function generateAccessToken(): string {
 }
 
 export async function GET(request: Request) {
+  console.log('🔔 PAYMENT CALLBACK STARTED');
+  console.log('Request URL:', request.url);
+  console.log('Request headers:', Object.fromEntries(request.headers.entries()));
+  
   try {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('session_id');
@@ -354,7 +362,8 @@ export async function GET(request: Request) {
     console.log('Payment status:', session.payment_status);
     return Response.json({ error: 'Payment pending' }, { status: 400 });
   } catch (error) {
-    console.error('Callback error:', error);
+    console.error('❌ Callback error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return Response.json(
       { error: error instanceof Error ? error.message : 'Callback processing failed' },
       { status: 500 }
