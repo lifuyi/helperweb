@@ -73,10 +73,9 @@ export const UserVpnCenter: React.FC = () => {
     });
   };
 
-  const getDaysRemaining = (createdAt: string, expiryDays: number): number => {
-    const expiryDate = new Date(
-      new Date(createdAt).getTime() + expiryDays * 24 * 60 * 60 * 1000
-    );
+  const getDaysRemaining = (expiresAt: string): number => {
+    if (!expiresAt) return 0;
+    const expiryDate = new Date(expiresAt);
     const now = new Date();
     const diffTime = expiryDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -127,7 +126,7 @@ export const UserVpnCenter: React.FC = () => {
       ) : (
         <div className="grid gap-4">
           {vpnClients.map((vpn) => {
-            const daysRemaining = getDaysRemaining(vpn.created_at, vpn.expiry_days);
+            const daysRemaining = getDaysRemaining(vpn.expires_at);
             const isExpiring = daysRemaining <= 3;
             const isExpired = daysRemaining <= 0;
 
