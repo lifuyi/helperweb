@@ -113,27 +113,14 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
       return { success: false, error: 'Invalid product' };
     }
 
-    // Check if user already has an active VPN client for this product
-    console.log('[VPN] Checking for existing VPN client...');
-    const { data: existingClient } = await supabase
-      .from('vpn_urls')
-      .select('*')
-      .eq('assigned_to_user_id', userId)
-      .eq('product_id', productId)
-      .eq('is_active', true)
-      .maybeSingle();
-
-    if (existingClient) {
-      console.log('[VPN] Found existing active VPN client:', existingClient.id);
-      return { 
-        success: true, 
-        client: existingClient as VpnClientRecord 
-      };
-    }
-
-    console.log('[VPN] No existing client found, proceeding to create new VPN client');
+    // Generate a unique email for this VPN client using session ID
+    // This allows users to purchase the same product multiple times
+    const uniqueEmail = `vpn-${sessionId.substring(0, 8)}@${email.split('@')[1]}`;
+    console.log('[VPN] Generated unique VPN client email:', uniqueEmail);
+    
+    console.log('[VPN] Proceeding to create new VPN client');
     console.log('[VPN] Calling createXuiClientWithExpiration');
-    const xuiResult = await createXuiClientWithExpiration(email, expiryDays);
+    const xuiResult = await createXuiClientWithExpiration(uniqueEmail, expiryDays);
     if (!xuiResult) {
       console.error('[VPN] X-UI client creation returned null');
       return { success: false, error: 'Failed to create X-UI client' };
@@ -163,7 +150,7 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
       inboundHost,
       inboundPort,
       xuiResult.uuid,
-      email,
+      uniqueEmail,
       {
         security,
         sni,
@@ -191,7 +178,7 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
         security_type: security,
         fingerprint: 'chrome',
         sni: sni,
-        vless_name: email,
+        vless_name: uniqueEmail,
         status: 'active',
         is_active: true,
         expires_at: expiresAt,
@@ -282,21 +269,6 @@ async function createXuiClientWithExpiration(
     if (!created) {
       console.error('[VPN] Client creation returned null');
       logger.error('Failed to create X-UI client');
-      
-      // Check if client already exists (duplicate email error)
-      console.log('[VPN] Checking if client already exists in X-UI...');
-      const existingClient = await xui.findClientByEmail(email);
-      
-      if (existingClient) {
-        console.log('[VPN] Found existing client in X-UI:', existingClient);
-        logger.log(`Using existing X-UI client for ${email}`);
-        return {
-          uuid: existingClient.uuid,
-          inboundId: existingClient.id,
-          expiryTime: existingClient.expiryTime
-        };
-      }
-      
       return null;
     }
 
