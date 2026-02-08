@@ -3,12 +3,31 @@
  * Creates X-UI VPN clients with expiration and stores VLESS URLs
  */
 
-import { supabase, getSupabaseClient } from './supabaseClient.js';
+import { createClient } from '@supabase/supabase-js';
 import { XuiApiClient } from './xuiClient.js';
 import { generateVlessUrlFromXui, parseVlessUrl } from '../utils/vlessGenerator.js';
 import { sendVpnCredentialsEmail } from '../api/email/send/vpn.js';
 import { logger } from '../utils/logger.js';
 import { getExpiryDaysForProduct } from '../config/products.js';
+
+/**
+ * Get Supabase service role client for admin operations
+ * This bypasses RLS policies for creating VPN clients
+ */
+function getSupabaseServiceClient() {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!url || !key) {
+    console.error('[VPN] Missing Supabase service role configuration');
+    throw new Error('Supabase service role configuration missing');
+  }
+
+  return createClient(url, key);
+}
+
+// Use service role client for VPN operations
+const supabase = getSupabaseServiceClient();
 
 export interface VpnClientRecord {
   id: string;
@@ -38,6 +57,39 @@ export interface CreateVpnClientRequest {
   sessionId: string;
 }
 
+/**
+ * Ensure user exists in the users table
+ */
+async function ensureUserExists(userId: string, email: string): Promise<void> {
+  try {
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', userId)
+      .single();
+
+    if (!existingUser) {
+      console.log('[VPN] Creating placeholder user:', userId);
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: userId,
+          email: email,
+          username: email.split('@')[0],
+        });
+
+      if (insertError) {
+        console.error('[VPN] Failed to create placeholder user:', insertError);
+        throw insertError;
+      }
+      console.log('[VPN] Placeholder user created successfully');
+    }
+  } catch (error) {
+    console.error('[VPN] Error in ensureUserExists:', error);
+    throw error;
+  }
+}
+
 export async function createVpnClient(request: CreateVpnClientRequest): Promise<{
   success: boolean;
   client?: VpnClientRecord;
@@ -49,6 +101,9 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
 
   try {
     console.log('[VPN] createVpnClient called:', { userId, email, productId, sessionId });
+    
+    // Ensure user exists in the database
+    await ensureUserExists(userId, email);
     
     const expiryDays = getExpiryDaysForProduct(productId);
     console.log('[VPN] Product expiry days:', { productId, expiryDays });

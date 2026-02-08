@@ -151,7 +151,19 @@ async function handlePaymentSuccess(
           console.error('Could not get user email for VPN creation:', userError);
         } else {
           try {
-            const { createVpnClient } = await import('../../../services/vpnClientService.js');
+            // Directly call the VPN creation function instead of HTTP API call
+            // This avoids the serverless function self-call issue
+            console.log('Importing vpnClientService from ../../services/vpnClientService.js');
+            const { createVpnClient } = await import('../../services/vpnClientService.js');
+            console.log('Successfully imported createVpnClient function');
+            
+            console.log('Calling createVpnClient with:', { 
+              userId, 
+              email: userData.email, 
+              productId, 
+              sessionId: stripeSessionId 
+            });
+            
             const vpnResult = await createVpnClient({
               userId,
               email: userData.email,
@@ -159,15 +171,18 @@ async function handlePaymentSuccess(
               sessionId: stripeSessionId,
             });
 
+            console.log('VPN creation result:', vpnResult);
+
             if (vpnResult.success) {
-              console.log('VPN client created successfully:', vpnResult.client?.id);
+              console.log('✅ VPN client created successfully:', vpnResult.client?.id);
               // Use the real VPN expiration from X-UI
               vpnExpiresAt = vpnResult.client?.expires_at || null;
             } else {
-              console.error('Failed to create VPN client:', vpnResult.error);
+              console.error('❌ Failed to create VPN client:', vpnResult.error, vpnResult.details);
             }
           } catch (importError) {
-            console.error('Failed to import vpnClientService:', importError);
+            console.error('❌ Failed to import or call vpnClientService:', importError);
+            console.error('Import error stack:', importError.stack);
           }
         }
       } catch (vpnError) {
@@ -293,27 +308,29 @@ export async function GET(request: Request) {
       const amount = session.amount_total ? session.amount_total / 100 : 0;
       const currency = session.currency || 'usd';
 
-      console.log('Payment confirmed. Processing:', {
+      console.log('✅ Payment confirmed. Processing:', {
         productId,
         userId,
         amount,
         currency,
+        metadata: session.metadata,
       });
 
       // Save purchase and create access token
       if (!userId) {
-        console.error('No userId in session metadata');
+        console.error('❌ No userId in session metadata');
         return Response.json({ error: 'No userId in session metadata' }, { status: 400 });
       }
 
       if (!productId) {
-        console.error('No productId in session metadata');
+        console.error('❌ No productId in session metadata');
         return Response.json({ error: 'No productId in session metadata' }, { status: 400 });
       }
 
       try {
+        console.log('🚀 Calling handlePaymentSuccess...');
         await handlePaymentSuccess(userId, productId, amount, currency, sessionId);
-        console.log('Payment processing completed successfully');
+        console.log('✅ Payment processing completed successfully');
         // Return HTML that will redirect after a short delay, or use a meta refresh
         return new Response(
           `<html><head><meta http-equiv="refresh" content="0; url=/payment/success?session_id=${sessionId}&product=${productId}" /></head><body>Redirecting...</body></html>`,
@@ -323,7 +340,7 @@ export async function GET(request: Request) {
           }
         );
       } catch (error) {
-        console.error('Failed to save payment details:', error);
+        console.error('❌ Failed to save payment details:', error);
         return Response.json(
           { error: error instanceof Error ? error.message : 'Failed to save payment details' },
           { status: 500 }
