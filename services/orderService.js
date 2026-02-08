@@ -57,18 +57,6 @@ async function getUserOrders(userId) {
     }
     const ordersWithTokens = await Promise.all(
       purchases.map(async (purchase) => {
-        const { data: tokens, error: tokenError } = await supabase.from("access_tokens").select("*").eq("user_id", userId).eq("product_id", purchase.product_id).order("created_at", { ascending: false });
-        if (tokenError) {
-          logger.error("Error fetching tokens for purchase:", tokenError);
-          return {
-            ...purchase,
-            access_tokens: [],
-            product_name: getProductName(purchase.product_id),
-            status_display: getStatusDisplay(purchase.status),
-            vpn_urls: []
-            // Added for consistency
-          };
-        }
         let vpnUrls = [];
         if (purchase.product_id.startsWith("vpn-")) {
           try {
@@ -85,7 +73,6 @@ async function getUserOrders(userId) {
         }
         return {
           ...purchase,
-          access_tokens: tokens || [],
           vpn_urls: vpnUrls,
           product_name: getProductName(purchase.product_id),
           status_display: getStatusDisplay(purchase.status)
@@ -118,9 +105,6 @@ async function getOrderDetails(purchaseId, userId) {
     throw error;
   }
 }
-function generateVpnUrl(token, baseUrl = window.location.origin) {
-  return `${baseUrl}/access?token=${token}`;
-}
 function getProductName(productId) {
   const productNames = {
     "payment-guide": "Payment Guide PDF",
@@ -138,10 +122,6 @@ function getStatusDisplay(status) {
     failed: "Failed"
   };
   return statusMap[status] || status;
-}
-function isTokenActive(token) {
-  if (!token.expires_at) return false;
-  return new Date(token.expires_at) > /* @__PURE__ */ new Date();
 }
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -161,9 +141,7 @@ function getDaysRemaining(expiresAt) {
 }
 export {
   formatDate,
-  generateVpnUrl,
   getDaysRemaining,
   getOrderDetails,
-  getUserOrders,
-  isTokenActive
+  getUserOrders
 };
