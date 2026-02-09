@@ -113,10 +113,9 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
       return { success: false, error: 'Invalid product' };
     }
 
-    // Generate a unique email for this VPN client using session ID
-    // This allows users to purchase the same product multiple times
-    const uniqueEmail = `vpn-${sessionId.substring(0, 8)}@${email.split('@')[1]}`;
-    console.log('[VPN] Generated unique VPN client email:', uniqueEmail);
+    // Use user's email directly from Stripe checkout
+    const uniqueEmail = email;
+    console.log('[VPN] Using user email for VPN client:', uniqueEmail);
     
     console.log('[VPN] Proceeding to create new VPN client');
     console.log('[VPN] Calling createXuiClientWithExpiration');
