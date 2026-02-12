@@ -231,8 +231,8 @@ const OrderCard: React.FC<OrderCardProps> = ({
         </div>
       </div>
 
-      {/* Access Tokens / VPN URLs */}
-      {order.status === 'completed' && (order.vpn_urls?.length > 0 || vpnTokens.length > 0) ? (
+      {/* Access Tokens / VPN URLs / PDF Download */}
+      {order.status === 'completed' && order.vpn_urls?.length > 0 ? (
         <div className="px-6 py-4">
           {/* Show VPN URLs from vpn_urls table (actual VLESS URLs) */}
           {order.vpn_urls && order.vpn_urls.length > 0 && (
@@ -261,6 +261,50 @@ const OrderCard: React.FC<OrderCardProps> = ({
               </div>
             </>
           )}
+        </div>
+      ) : order.status === 'completed' && order.product_id === 'payment-guide' ? (
+        <div className="px-6 py-4">
+          <h4 className="font-semibold text-slate-900 mb-4 flex items-center">
+            <svg
+              className="w-5 h-5 mr-2 text-chinaRed"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            Your Download
+          </h4>
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-green-800 text-sm mb-3">
+              Your Payment Guide PDF is ready for download!
+            </p>
+            <a
+              href="/payment-guide.pdf"
+              download
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-chinaRed text-white rounded-lg hover:bg-red-700 transition-colors"
+            >
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              <span>Download PDF</span>
+            </a>
+          </div>
         </div>
       ) : order.status === 'completed' ? (
         <div className="px-6 py-4">
