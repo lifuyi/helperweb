@@ -11226,6 +11226,7 @@ var require_nodemailer = __commonJS({
 
 // api/email/send/vpn.ts
 var import_nodemailer = __toESM(require_nodemailer(), 1);
+var EMAILS_ENABLED = false;
 function createEmailTransporter() {
   const config = {
     host: process.env.SMTP_HOST || "",
@@ -11383,6 +11384,10 @@ Thank you for choosing our VPN service!
   `.trim();
 }
 async function sendVpnCredentialsEmail(data) {
+  if (!EMAILS_ENABLED) {
+    console.log("[EMAIL DISABLED] Would have sent VPN credentials to:", data.userEmail);
+    return true;
+  }
   const transporter = createEmailTransporter();
   if (!transporter) {
     console.error("Email transporter not available");
@@ -11406,6 +11411,10 @@ async function sendVpnCredentialsEmail(data) {
   }
 }
 async function sendVpnActivationEmail(userEmail, userName, productName, expiryDays, expiresAt) {
+  if (!EMAILS_ENABLED) {
+    console.log("[EMAIL DISABLED] Would have sent VPN activation to:", userEmail);
+    return true;
+  }
   const transporter = createEmailTransporter();
   if (!transporter) {
     console.error("Email transporter not available");
@@ -11450,6 +11459,10 @@ async function sendVpnActivationEmail(userEmail, userName, productName, expiryDa
   }
 }
 async function sendVpnExpiryReminderEmail(userEmail, userName, productName, daysRemaining) {
+  if (!EMAILS_ENABLED) {
+    console.log("[EMAIL DISABLED] Would have sent expiry reminder to:", userEmail);
+    return true;
+  }
   const transporter = createEmailTransporter();
   if (!transporter) {
     console.error("Email transporter not available");

@@ -24,7 +24,12 @@ var logger = {
 };
 
 // services/emailService.ts
+var EMAILS_ENABLED = false;
 async function sendEmail(config) {
+  if (!EMAILS_ENABLED) {
+    console.log("[EMAIL DISABLED] Would have sent email to:", config.to);
+    return true;
+  }
   try {
     const response = await fetch("/api/email/send", {
       method: "POST",

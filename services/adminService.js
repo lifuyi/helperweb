@@ -47,6 +47,10 @@ __export(emailService_exports, {
   sendPurchaseConfirmation: () => sendPurchaseConfirmation
 });
 async function sendEmail(config) {
+  if (!EMAILS_ENABLED) {
+    console.log("[EMAIL DISABLED] Would have sent email to:", config.to);
+    return true;
+  }
   try {
     const response = await fetch("/api/email/send", {
       method: "POST",
@@ -303,9 +307,11 @@ async function sendPasswordResetEmail(email, resetLink) {
     return false;
   }
 }
+var EMAILS_ENABLED;
 var init_emailService = __esm({
   "services/emailService.ts"() {
     init_logger();
+    EMAILS_ENABLED = false;
   }
 });
 

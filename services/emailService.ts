@@ -1,5 +1,8 @@
 import { logger } from '../utils/logger.js';
 
+// TEMPORARY: Email sending disabled
+const EMAILS_ENABLED = false;
+
 /**
  * Email configuration
  */
@@ -15,6 +18,11 @@ interface EmailConfig {
  * Send email via API
  */
 export async function sendEmail(config: EmailConfig): Promise<boolean> {
+  if (!EMAILS_ENABLED) {
+    console.log('[EMAIL DISABLED] Would have sent email to:', config.to);
+    return true;
+  }
+
   try {
     const response = await fetch('/api/email/send', {
       method: 'POST',

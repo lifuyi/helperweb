@@ -6,6 +6,9 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 
+// TEMPORARY: Email sending disabled
+const EMAILS_ENABLED = false;
+
 /**
  * Email configuration from environment variables
  */
@@ -211,6 +214,11 @@ Thank you for choosing our VPN service!
  * Send VPN credentials email
  */
 export async function sendVpnCredentialsEmail(data: VpnEmailData): Promise<boolean> {
+  if (!EMAILS_ENABLED) {
+    console.log('[EMAIL DISABLED] Would have sent VPN credentials to:', data.userEmail);
+    return true; // Return true to not break the flow
+  }
+
   const transporter = createEmailTransporter();
 
   if (!transporter) {
@@ -248,6 +256,11 @@ export async function sendVpnActivationEmail(
   expiryDays: number,
   expiresAt: Date
 ): Promise<boolean> {
+  if (!EMAILS_ENABLED) {
+    console.log('[EMAIL DISABLED] Would have sent VPN activation to:', userEmail);
+    return true;
+  }
+
   const transporter = createEmailTransporter();
 
   if (!transporter) {
@@ -304,6 +317,11 @@ export async function sendVpnExpiryReminderEmail(
   productName: string,
   daysRemaining: number
 ): Promise<boolean> {
+  if (!EMAILS_ENABLED) {
+    console.log('[EMAIL DISABLED] Would have sent expiry reminder to:', userEmail);
+    return true;
+  }
+
   const transporter = createEmailTransporter();
 
   if (!transporter) {
