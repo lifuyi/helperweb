@@ -41,7 +41,6 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks: {
             'stripe': ['@stripe/stripe-js'],
-            'genai': ['@google/genai'],
           }
         }
       },

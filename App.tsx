@@ -5,7 +5,6 @@ import { Stats } from './components/Stats';
 import { Features } from './components/Features';
 import { Pricing } from './components/Pricing';
 import { Footer } from './components/Footer';
-import { Assistant } from './components/Assistant';
 import { FlashCards } from './components/FlashCards';
 import { PaymentGuide } from './components/PaymentGuide';
 import { VpnPage } from './components/VpnPage';
@@ -80,7 +79,6 @@ function App({ initialPage = 'home', onNavigateHome }: AppProps) {
       <Navbar onNavigate={handleNavigate} currentPage={currentPage} />
       {renderContent()}
       {currentPage !== 'user-center' && <Footer />}
-      <Assistant />
     </div>
   );
 }
