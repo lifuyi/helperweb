@@ -62,13 +62,12 @@ export const AccessPage: React.FC = () => {
    * 你可以根据实际需求修改这个函数
    */
   const generateDownloadUrl = (productId: string): string => {
-    // 例如：返回 Google Drive 链接、AWS S3 链接等
     const downloadLinks: Record<string, string> = {
-      'payment-guide': 'https://example.com/downloads/payment-guide.pdf',
-      'vpn-3days': 'https://example.com/downloads/vpn-config.zip',
-      'vpn-7days': 'https://example.com/downloads/vpn-config.zip',
-      'vpn-14days': 'https://example.com/downloads/vpn-config.zip',
-      'vpn-30days': 'https://example.com/downloads/vpn-config.zip',
+      'payment-guide': '/payment-guide.pdf',
+      'vpn-3days': '',
+      'vpn-7days': '',
+      'vpn-14days': '',
+      'vpn-30days': '',
     };
 
     return downloadLinks[productId] || '';

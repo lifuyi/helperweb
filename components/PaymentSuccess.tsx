@@ -35,27 +35,31 @@ export const PaymentSuccess: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            <a
-              href="/user-center"
-              className="block w-full bg-chinaRed hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center text-center"
-            >
-              <svg className="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              View My Orders & VPN URLs
-            </a>
+            {product === 'payment-guide' ? (
+              <a
+                href="/payment-guide.pdf"
+                download
+                className="block w-full bg-chinaRed hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center text-center"
+              >
+                <Download className="mr-2 w-4 h-4" />
+                Download PDF Guide
+              </a>
+            ) : (
+              <a
+                href="/user-center"
+                className="block w-full bg-chinaRed hover:bg-red-700 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center text-center"
+              >
+                <svg className="mr-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                View My Orders & VPN URLs
+              </a>
+            )}
 
             <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
               <Mail className="mr-2 w-4 h-4" />
               Check Email for Details
             </button>
-
-            {product === 'payment-guide' && (
-              <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 py-3 rounded-xl font-bold transition-colors flex items-center justify-center">
-                <Download className="mr-2 w-4 h-4" />
-                Download PDF Guide
-              </button>
-            )}
 
             <a
               href="/"
