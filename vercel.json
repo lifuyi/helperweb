@@ -6,7 +6,7 @@
     "api/payment/checkout/index.ts": {
       "maxDuration": 60
     },
-    "api/vpn/create/index.ts": {
+    "api/vpn/create.ts": {
       "maxDuration": 60
     }
   },
