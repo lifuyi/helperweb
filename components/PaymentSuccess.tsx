@@ -4,7 +4,6 @@ import { useSearchParams } from 'react-router-dom';
 
 export const PaymentSuccess: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const sessionId = searchParams.get('session_id');
   const product = searchParams.get('product');
 
   const productNames: Record<string, string> = {
@@ -31,7 +30,6 @@ export const PaymentSuccess: React.FC = () => {
           <div className="bg-slate-50 rounded-xl p-4 mb-6">
             <p className="text-sm text-slate-500 mb-2">Order Details</p>
             <p className="font-semibold text-slate-900">{productNames[product || ''] || 'Product'}</p>
-            <p className="text-xs text-slate-400">Session ID: {sessionId?.slice(0, 20)}...</p>
           </div>
 
           <div className="space-y-3">
