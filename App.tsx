@@ -10,7 +10,6 @@ import { PaymentGuide } from './components/PaymentGuide';
 import { VpnPage } from './components/VpnPage';
 import { UserCenter } from './components/UserCenter';
 import { AdminDashboard } from './components/AdminDashboard';
-import { SectionId } from './types';
 import { logger } from './utils/logger';
 
 interface AppProps {

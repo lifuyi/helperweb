@@ -24258,6 +24258,10 @@ Thank you for choosing our VPN service!
   `.trim();
 }
 async function sendVpnCredentialsEmail(data) {
+  if (!EMAILS_ENABLED) {
+    console.log("[EMAIL DISABLED] Would have sent VPN credentials to:", data.userEmail);
+    return true;
+  }
   const transporter = createEmailTransporter();
   if (!transporter) {
     console.error("Email transporter not available");
@@ -24571,7 +24575,7 @@ async function revokeVpnClient(clientId) {
     return { success: false };
   }
 }
-var import_nodemailer, isDevelopment, logger, XuiApiClient, isDevelopment2, logger2, isDevelopment3, logger3, DEFAULT_PRODUCTS, productsCache, cacheTimestamp, CACHE_TTL, PRODUCTS, supabase;
+var import_nodemailer, isDevelopment, logger, XuiApiClient, isDevelopment2, logger2, EMAILS_ENABLED, isDevelopment3, logger3, DEFAULT_PRODUCTS, productsCache, cacheTimestamp, CACHE_TTL, PRODUCTS, supabase;
 var init_vpnClientService = __esm({
   "services/vpnClientService.js"() {
     init_dist4();
@@ -24938,6 +24942,7 @@ var init_vpnClientService = __esm({
         }
       }
     };
+    EMAILS_ENABLED = false;
     isDevelopment3 = false;
     logger3 = {
       log: (...args) => {
@@ -25256,6 +25261,12 @@ async function GET(request) {
       if (!productId) {
         console.error("\u274C No productId in session metadata");
         return Response.json({ error: "No productId in session metadata" }, { status: 400 });
+      }
+      const validProductPrefixes = ["vpn-", "payment-guide"];
+      const isValidProduct = validProductPrefixes.some((prefix) => productId.startsWith(prefix));
+      if (!isValidProduct) {
+        console.error("\u274C Invalid productId format:", productId);
+        return Response.json({ error: "Invalid productId format" }, { status: 400 });
       }
       try {
         console.log("\u{1F680} Calling handlePaymentSuccess...");

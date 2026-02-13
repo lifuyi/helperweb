@@ -59,32 +59,39 @@ export interface CreateVpnClientRequest {
 
 /**
  * Ensure user exists in the users table
+ * Uses upsert to handle race conditions where multiple requests try to create the same user
  */
 async function ensureUserExists(userId: string, email: string): Promise<void> {
   try {
-    const { data: existingUser } = await supabase
+    // Use upsert to handle race conditions - if user already exists, this will be a no-op
+    const { error: upsertError } = await supabase
       .from('users')
-      .select('id')
-      .eq('id', userId)
-      .single();
+      .upsert({
+        id: userId,
+        email: email,
+        username: email.split('@')[0],
+      }, { 
+        onConflict: 'id',
+        ignoreDuplicates: true 
+      });
 
-    if (!existingUser) {
-      console.log('[VPN] Creating placeholder user:', userId);
-      const { error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email: email,
-          username: email.split('@')[0],
-        });
-
-      if (insertError) {
-        console.error('[VPN] Failed to create placeholder user:', insertError);
-        throw insertError;
+    if (upsertError) {
+      // If it's not a duplicate key error, log and throw
+      if (!upsertError.message.includes('duplicate') && !upsertError.code === '23505') {
+        console.error('[VPN] Failed to upsert user:', upsertError);
+        throw upsertError;
       }
-      console.log('[VPN] Placeholder user created successfully');
+      console.log('[VPN] User already exists, skipping creation');
+    } else {
+      console.log('[VPN] User created successfully');
     }
   } catch (error) {
+    // Check if it's a duplicate key error (another request created the user)
+    const err = error as any;
+    if (err?.code === '23505' || err?.message?.includes('duplicate')) {
+      console.log('[VPN] User already exists (concurrent creation):', userId);
+      return; // This is OK - user exists
+    }
     console.error('[VPN] Error in ensureUserExists:', error);
     throw error;
   }

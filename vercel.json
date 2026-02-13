@@ -5,6 +5,9 @@
   "functions": {
     "api/payment/checkout/index.ts": {
       "maxDuration": 60
+    },
+    "api/vpn/create/index.ts": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

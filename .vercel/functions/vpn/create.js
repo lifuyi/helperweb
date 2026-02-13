@@ -24438,6 +24438,7 @@ function parseVlessUrl(urlString) {
     return null;
   }
 }
+var EMAILS_ENABLED = false;
 function createEmailTransporter() {
   const config = {
     host: process.env.SMTP_HOST || "",
@@ -24595,6 +24596,10 @@ Thank you for choosing our VPN service!
   `.trim();
 }
 async function sendVpnCredentialsEmail(data) {
+  if (!EMAILS_ENABLED) {
+    console.log("[EMAIL DISABLED] Would have sent VPN credentials to:", data.userEmail);
+    return true;
+  }
   const transporter = createEmailTransporter();
   if (!transporter) {
     console.error("Email transporter not available");

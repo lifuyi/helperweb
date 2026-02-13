@@ -351,6 +351,14 @@ export async function GET(request: Request) {
         return Response.json({ error: 'No productId in session metadata' }, { status: 400 });
       }
 
+      // Validate productId format
+      const validProductPrefixes = ['vpn-', 'payment-guide'];
+      const isValidProduct = validProductPrefixes.some(prefix => productId.startsWith(prefix));
+      if (!isValidProduct) {
+        console.error('❌ Invalid productId format:', productId);
+        return Response.json({ error: 'Invalid productId format' }, { status: 400 });
+      }
+
       try {
         console.log('🚀 Calling handlePaymentSuccess...');
         // Try to get email from customer_details first, then from expanded customer object

@@ -774,21 +774,29 @@ function getSupabaseServiceClient() {
 var supabase = getSupabaseServiceClient();
 async function ensureUserExists(userId, email) {
   try {
-    const { data: existingUser } = await supabase.from("users").select("id").eq("id", userId).single();
-    if (!existingUser) {
-      console.log("[VPN] Creating placeholder user:", userId);
-      const { error: insertError } = await supabase.from("users").insert({
-        id: userId,
-        email,
-        username: email.split("@")[0]
-      });
-      if (insertError) {
-        console.error("[VPN] Failed to create placeholder user:", insertError);
-        throw insertError;
+    const { error: upsertError } = await supabase.from("users").upsert({
+      id: userId,
+      email,
+      username: email.split("@")[0]
+    }, {
+      onConflict: "id",
+      ignoreDuplicates: true
+    });
+    if (upsertError) {
+      if (!upsertError.message.includes("duplicate") && !upsertError.code === "23505") {
+        console.error("[VPN] Failed to upsert user:", upsertError);
+        throw upsertError;
       }
-      console.log("[VPN] Placeholder user created successfully");
+      console.log("[VPN] User already exists, skipping creation");
+    } else {
+      console.log("[VPN] User created successfully");
     }
   } catch (error) {
+    const err = error;
+    if (err?.code === "23505" || err?.message?.includes("duplicate")) {
+      console.log("[VPN] User already exists (concurrent creation):", userId);
+      return;
+    }
     console.error("[VPN] Error in ensureUserExists:", error);
     throw error;
   }
