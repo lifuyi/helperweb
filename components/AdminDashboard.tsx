@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, BarChart3, Package, Upload, AlertCircle, Loader } from 'lucide-react';
+import { ArrowLeft, BarChart3, Package, Server, AlertCircle, Loader } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getAdminStats, AdminStats } from '../services/adminService';
 import { PurchaseManagement } from './PurchaseManagement';
-import { VpnImport } from './VpnImport';
+import { VpnManagement } from './VpnManagement';
 import { logger } from '../utils/logger';
 
 /**
@@ -21,7 +21,7 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
   const { user, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'purchases' | 'vpn-import'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'purchases' | 'vpn-management'>('overview');
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -204,15 +204,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
             Purchases
           </button>
           <button
-            onClick={() => setActiveTab('vpn-import')}
+            onClick={() => setActiveTab('vpn-management')}
             className={`px-6 py-3 font-semibold border-b-2 transition-colors ${
-              activeTab === 'vpn-import'
+              activeTab === 'vpn-management'
                 ? 'border-chinaRed text-chinaRed'
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            <Upload className="w-5 h-5 inline mr-2" />
-            VPN Import
+            <Server className="w-5 h-5 inline mr-2" />
+            VPN Management
           </button>
         </div>
 
@@ -224,8 +224,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ onBack }) => {
           {activeTab === 'purchases' && (
             <PurchaseManagement />
           )}
-          {activeTab === 'vpn-import' && (
-            <VpnImport onSuccess={loadStats} />
+          {activeTab === 'vpn-management' && (
+            <VpnManagement onSuccess={loadStats} />
           )}
         </div>
       </div>
@@ -316,7 +316,7 @@ const OverviewTab: React.FC<OverviewTabProps> = ({ stats }) => {
           </li>
           <li className="flex items-center">
             <span className="w-2 h-2 bg-chinaRed rounded-full mr-3"></span>
-            <span><strong>VPN Import:</strong> Import new VPN URLs and manage inventory</span>
+            <span><strong>VPN Management:</strong> View and manage all VPN URLs, toggle active/inactive status</span>
           </li>
         </ul>
       </div>
