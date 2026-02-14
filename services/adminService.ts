@@ -165,7 +165,8 @@ export async function addVpnUrl(
  * Bulk import VPN URLs with VLESS configuration parsing
  */
 export async function bulkImportVpnUrls(
-  vpnData: Array<{ url: string; day_period: number; traffic_limit: number }>
+  vpnData: Array<{ url: string; day_period: number; traffic_limit: number }>,
+  assignedToUserId?: string
 ): Promise<{ success: number; failed: number; errors: string[] }> {
   try {
     const errors: string[] = [];
@@ -188,6 +189,7 @@ export async function bulkImportVpnUrls(
               day_period: item.day_period,
               traffic_limit: item.traffic_limit,
               status: 'active',
+              assigned_to_user_id: assignedToUserId || null,
               // VLESS-specific fields
               vless_uuid: vlessConfig?.uuid || null,
               vless_host: vlessConfig?.host || null,

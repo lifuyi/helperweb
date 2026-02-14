@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { logger } from '../utils/logger';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Upload,
   AlertCircle,
@@ -26,6 +27,7 @@ interface VpnImportProps {
 }
 
 export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'import' | 'inventory'>('import');
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<VlessConfig[]>([]);
@@ -181,7 +183,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
         traffic_limit: trafficLimitBytes,
       }));
       
-      const result = await bulkImportVpnUrls(urlsToImport);
+      const result = await bulkImportVpnUrls(urlsToImport, user?.id);
       setImportResult({
         success: result.failed === 0,
         successCount: result.success,

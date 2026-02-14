@@ -480,7 +480,7 @@ async function addVpnUrl(url, dayPeriod, trafficLimit) {
     throw error;
   }
 }
-async function bulkImportVpnUrls(vpnData) {
+async function bulkImportVpnUrls(vpnData, assignedToUserId) {
   try {
     const errors = [];
     let successCount = 0;
@@ -495,6 +495,7 @@ async function bulkImportVpnUrls(vpnData) {
             day_period: item.day_period,
             traffic_limit: item.traffic_limit,
             status: "active",
+            assigned_to_user_id: assignedToUserId || null,
             // VLESS-specific fields
             vless_uuid: vlessConfig?.uuid || null,
             vless_host: vlessConfig?.host || null,
