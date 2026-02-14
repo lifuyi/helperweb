@@ -152,6 +152,28 @@ var XuiApiClient = class {
     }
   }
   /**
+   * Get a specific client by UUID from an inbound
+   * @param inboundId - The inbound ID
+   * @param clientUuid - The client UUID to find
+   */
+  async getClientByUuid(inboundId, clientUuid) {
+    const clients = await this.getInboundClients(inboundId);
+    const client = clients.find((c) => String(c.id) === clientUuid);
+    if (client) {
+      return {
+        id: inboundId,
+        enable: client.enable,
+        email: client.email,
+        uuid: String(client.id),
+        limitIp: client.limitIp,
+        totalGB: client.totalGB,
+        expiryTime: client.expiryTime,
+        subId: client.subId,
+      };
+    }
+    return null;
+  }
+  /**
    * Find an existing client by email
    * @param email - Client email to search for
    */

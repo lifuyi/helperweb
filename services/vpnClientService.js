@@ -1030,10 +1030,103 @@ async function revokeVpnClient(clientId) {
     return { success: false };
   }
 }
+
+async function pollClientActivations() {
+  const errors = [];
+  let activated = 0;
+
+  try {
+    const { data: pendingClients, error: fetchError } = await supabase
+      .from('vpn_urls')
+      .select('*')
+      .is('expires_at', null)
+      .eq('is_active', true)
+      .not('vless_uuid', 'is', null);
+
+    if (fetchError) {
+      console.error('[POLL] Error fetching pending clients:', fetchError);
+      return { checked: 0, activated: 0, errors: [fetchError.message] };
+    }
+
+    if (!pendingClients || pendingClients.length === 0) {
+      console.log('[POLL] No pending VPN clients to check');
+      return { checked: 0, activated: 0, errors: [] };
+    }
+
+    console.log(`[POLL] Checking ${pendingClients.length} pending VPN clients for activation`);
+
+    const xui = await createDefaultXuiClient();
+    if (!xui) {
+      const error = 'Failed to create X-UI client';
+      console.error('[POLL]', error);
+      return { checked: pendingClients.length, activated: 0, errors: [error] };
+    }
+
+    for (const client of pendingClients) {
+      try {
+        if (!client.xui_inbound_id || !client.vless_uuid) {
+          console.log(`[POLL] Skipping client ${client.id}: missing inbound_id or uuid`);
+          continue;
+        }
+
+        const xuiClient = await xui.getClientByUuid(client.xui_inbound_id, client.vless_uuid);
+
+        if (!xuiClient) {
+          console.log(`[POLL] Client not found in X-UI: ${client.vless_uuid}`);
+          continue;
+        }
+
+        console.log(`[POLL] Client ${client.email}: expiryTime = ${xuiClient.expiryTime}`);
+
+        if (xuiClient.expiryTime > 0) {
+          const activatedAt = new Date();
+          const dayPeriod = client.day_period || 30;
+          const expiresAt = new Date(activatedAt);
+          expiresAt.setDate(expiresAt.getDate() + dayPeriod);
+
+          const { error: updateError } = await supabase
+            .from('vpn_urls')
+            .update({
+              activated_at: activatedAt.toISOString(),
+              expires_at: expiresAt.toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', client.id);
+
+          if (updateError) {
+            console.error(`[POLL] Failed to update client ${client.id}:`, updateError);
+            errors.push(`Failed to update ${client.id}: ${updateError.message}`);
+          } else {
+            console.log(`[POLL] Client ${client.email} activated! Expires at: ${expiresAt.toISOString()}`);
+            activated++;
+          }
+        } else if (xuiClient.expiryTime < 0) {
+          console.log(`[POLL] Client ${client.email} not yet activated`);
+        } else {
+          console.log(`[POLL] Client ${client.email} has no expiration set`);
+        }
+      } catch (clientError) {
+        const errorMsg = `Error checking client ${client.id}: ${clientError instanceof Error ? clientError.message : 'Unknown error'}`;
+        console.error('[POLL]', errorMsg);
+        errors.push(errorMsg);
+      }
+    }
+
+    console.log(`[POLL] Complete: ${activated}/${pendingClients.length} clients activated`);
+    return { checked: pendingClients.length, activated, errors };
+
+  } catch (error) {
+    const errorMsg = `Polling error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    console.error('[POLL]', errorMsg);
+    return { checked: 0, activated: 0, errors: [errorMsg] };
+  }
+}
+
 export {
   createVpnClient,
   getUserVpnClient,
   getUserVpnClients,
   getUserVpnClientsFromTable,
-  revokeVpnClient
+  revokeVpnClient,
+  pollClientActivations
 };
