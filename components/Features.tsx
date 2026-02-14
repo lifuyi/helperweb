@@ -11,7 +11,7 @@ export const Features: React.FC = () => {
     {
       icon: <Wifi className="w-8 h-8 text-chinaRed" />,
       title: "Unrestricted Internet",
-      description: "High-speed VPN optimized for China's networks. 50GB data, usage starts on first connection."
+      description: "High-speed VPN optimized for China's networks. Up to 100GB data, usage starts on first connection."
     },
     {
       icon: <ShieldCheck className="w-8 h-8 text-chinaRed" />,

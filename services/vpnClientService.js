@@ -814,9 +814,17 @@ async function createVpnClient(request) {
     }
     const uniqueEmail = email;
     console.log("[VPN] Using user email for VPN client:", uniqueEmail);
+    // Calculate traffic limit based on plan
+    // Short Trip (3 days): 50GB, Weekly (7 days): 50GB, Extended (14 days): 80GB, Monthly (30 days): 100GB
+    let trafficLimitGB = 50;
+    if (expiryDays >= 30) {
+      trafficLimitGB = 100;
+    } else if (expiryDays >= 14) {
+      trafficLimitGB = 80;
+    }
     console.log("[VPN] Proceeding to create new VPN client");
     console.log("[VPN] Calling createXuiClientWithExpiration");
-    const xuiResult = await createXuiClientWithExpiration(uniqueEmail, expiryDays);
+    const xuiResult = await createXuiClientWithExpiration(uniqueEmail, expiryDays, trafficLimitGB);
     if (!xuiResult) {
       console.error("[VPN] X-UI client creation returned null");
       return { success: false, error: "Failed to create X-UI client" };
@@ -913,7 +921,7 @@ async function createVpnClient(request) {
     return { success: false, error: "Internal server error" };
   }
 }
-async function createXuiClientWithExpiration(email, expiryDays) {
+async function createXuiClientWithExpiration(email, expiryDays, trafficLimitGB = 50) {
   try {
     console.log("[VPN] Starting X-UI client creation for email:", email);
     const xui = await createDefaultXuiClient();
@@ -933,8 +941,8 @@ async function createXuiClientWithExpiration(email, expiryDays) {
     }
     const inbound = inbounds[0];
     console.log("[VPN] Using inbound:", { id: inbound.id, port: inbound.port, protocol: inbound.protocol });
-    console.log("[VPN] Creating client with expiry:", expiryDays, "days");
-    const created = await xui.createClient(inbound.id, email, expiryDays, 1);
+    console.log("[VPN] Creating client with expiry:", expiryDays, "days, traffic:", trafficLimitGB, "GB");
+    const created = await xui.createClient(inbound.id, email, expiryDays, 1, trafficLimitGB);
     console.log("[VPN] Client creation response:", created);
     if (!created) {
       console.error("[VPN] Client creation returned null");

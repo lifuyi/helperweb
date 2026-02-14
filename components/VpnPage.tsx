@@ -92,7 +92,7 @@ export const VpnPage: React.FC<VpnPageProps> = ({ onBack }) => {
                 </div>
                 <div className="flex items-center text-sm text-slate-600">
                   <Shield className="w-4 h-4 text-chinaRed mr-3" />
-                  50GB Data
+                  {plan.days >= 30 ? '100GB' : plan.days >= 14 ? '80GB' : '50GB'} Data
                 </div>
                 <div className="flex items-center text-sm text-slate-600">
                   <Check className="w-4 h-4 text-chinaRed mr-3" />
@@ -124,7 +124,7 @@ export const VpnPage: React.FC<VpnPageProps> = ({ onBack }) => {
                 </div>
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                     <h4 className="font-bold text-slate-900 mb-2">How much data do I get?</h4>
-                    <p className="text-slate-600">Each plan includes 50GB of data per subscription period. That's enough for browsing, video calls, streaming, and more.</p>
+                    <p className="text-slate-600">50GB for Short Trip/Weekly, 80GB for Extended, 100GB for Monthly. That's enough for browsing, video calls, streaming, and more.</p>
                 </div>
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                     <h4 className="font-bold text-slate-900 mb-2">Do I need to install an app?</h4>

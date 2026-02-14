@@ -16,7 +16,7 @@ export const FlashCards: React.FC = () => {
     },
     {
       question: "Can I use it outside China?",
-      answer: "Generally no. These functions are primarily for use within mainland China.",
+      answer: "Yes! With an international card linked, you can use WeChat Pay and Alipay globally - at overseas online merchants and in regions accepting these payments.",
       icon: <Lock className="w-8 h-8 text-white" />
     },
     {

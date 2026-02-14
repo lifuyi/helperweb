@@ -209,7 +209,7 @@ var XuiApiClient = class {
    * @param expiryDays - Days until expiration (0 = never expires)
    * @param limitIp - Number of concurrent connections (0 = unlimited)
    */
-  async createClient(inboundId, email, expiryDays = 30, limitIp = 1) {
+  async createClient(inboundId, email, expiryDays = 30, limitIp = 1, trafficLimitGB = 50) {
     const uuid = crypto.randomUUID();
     const subId = crypto.randomUUID().replace(/-/g, "").substring(0, 16);
     // Use negative expiryTime to trigger expiration countdown AFTER first use
@@ -218,13 +218,15 @@ var XuiApiClient = class {
     const expiryTime = expiryDays > 0 ? -(expiryDays * 24 * 60 * 60 * 1000) : 0;
     console.log("[X-UI] DEBUG: expiryDays =", expiryDays);
     console.log("[X-UI] DEBUG: expiryTime (should be negative) =", expiryTime);
+    console.log("[X-UI] DEBUG: trafficLimitGB =", trafficLimitGB);
+    const trafficLimitBytes = trafficLimitGB * 1024 * 1024 * 1024;
     const settingsData = {
       clients: [{
         id: uuid,
         flow: "",
         email,
         limitIp,
-        totalGB: 53687091200,
+        totalGB: trafficLimitBytes,
         expiryTime,
         enable: true,
         tgId: "",

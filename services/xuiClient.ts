@@ -262,12 +262,14 @@ export class XuiApiClient {
    * @param email - Client identifier (usually user's email)
    * @param expiryDays - Days until expiration (0 = never expires)
    * @param limitIp - Number of concurrent connections (0 = unlimited)
+   * @param trafficLimitGB - Traffic limit in GB (default: 50GB)
    */
   async createClient(
     inboundId: number,
     email: string,
     expiryDays: number = 30,
-    limitIp: number = 1
+    limitIp: number = 1,
+    trafficLimitGB: number = 50
   ): Promise<XuiClient | null> {
     const uuid = crypto.randomUUID();
     const subId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
@@ -279,6 +281,9 @@ export class XuiApiClient {
 
     console.log('[X-UI] DEBUG: expiryDays =', expiryDays);
     console.log('[X-UI] DEBUG: expiryTime (should be negative) =', expiryTime);
+    console.log('[X-UI] DEBUG: trafficLimitGB =', trafficLimitGB);
+
+    const trafficLimitBytes = trafficLimitGB * 1024 * 1024 * 1024;
 
     const settingsData = {
       clients: [{
@@ -286,7 +291,7 @@ export class XuiApiClient {
         flow: '',
         email: email,
         limitIp: limitIp,
-        totalGB: 53687091200, // 50GB
+        totalGB: trafficLimitBytes,
         expiryTime: expiryTime,
         enable: true,
         tgId: '',

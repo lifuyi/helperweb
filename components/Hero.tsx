@@ -29,7 +29,7 @@ export const Hero: React.FC<HeroProps> = ({ onNavigate }) => {
             <span className="text-chinaRed">in China.</span>
           </h1>
           <p className="text-xl text-slate-200 mb-8 leading-relaxed">
-            Don't get stuck unable to pay for a taxi or meal. Our step-by-step guide helps you link international cards to WeChat Pay and Alipay. We also offer China VPN with 50GB data - usage starts on first connection, so you can buy now and use later.
+            Don't get stuck unable to pay for a taxi or meal. Our step-by-step guide helps you link international cards to WeChat Pay and Alipay. We also offer China VPN with up to 100GB data - usage starts on first connection, so you can buy now and use later.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4">
