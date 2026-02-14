@@ -202,7 +202,7 @@ var XuiApiClient = class {
         flow: "",
         email,
         limitIp,
-        totalGB: 107374182400,
+        totalGB: 53687091200,
         expiryTime,
         enable: true,
         tgId: "",

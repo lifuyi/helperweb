@@ -57,10 +57,10 @@ export const VpnPage: React.FC<VpnPageProps> = ({ onBack }) => {
           <div className="inline-block px-3 py-1 bg-red-100 text-chinaRed rounded-full text-xs font-bold uppercase tracking-wider mb-4">
             Bypass the Firewall
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">High-Speed VPN Access</h1>
+          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">China Travel VPN</h1>
           <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
             Stay connected to Google, Instagram, WhatsApp, and more while in China. 
-            Our service offers dedicated bandwidth optimized for mainland China networks.
+            Your usage period starts from the moment you first connect - buy now, use later.
           </p>
         </div>
 
@@ -88,11 +88,11 @@ export const VpnPage: React.FC<VpnPageProps> = ({ onBack }) => {
               <div className="space-y-4 mb-8">
                 <div className="flex items-center text-sm text-slate-600">
                   <Clock className="w-4 h-4 text-chinaRed mr-3" />
-                  {plan.days} Days Access
+                  {plan.days} Days Access (starts on first use)
                 </div>
                 <div className="flex items-center text-sm text-slate-600">
                   <Shield className="w-4 h-4 text-chinaRed mr-3" />
-                  Unlimited Data
+                  50GB Data
                 </div>
                 <div className="flex items-center text-sm text-slate-600">
                   <Check className="w-4 h-4 text-chinaRed mr-3" />

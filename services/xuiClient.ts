@@ -212,12 +212,24 @@ export class XuiApiClient {
   }
 
   /**
+   * Helper method to parse clients from inbound settings
+   */
+  private getClientsFromInbound(inbound: XuiInbound): any[] {
+    try {
+      const settings = JSON.parse(inbound.settings || '{}');
+      return settings.clients || [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Find an existing client by email
    * @param email - Client email to search for
    */
   async findClientByEmail(email: string): Promise<XuiClient | null> {
     const inbounds = await this.getInbounds();
-    
+
     for (const inbound of inbounds) {
       const clients = this.getClientsFromInbound(inbound);
       const existingClient = clients.find(c => c.email === email);
@@ -274,7 +286,7 @@ export class XuiApiClient {
         flow: '',
         email: email,
         limitIp: limitIp,
-        totalGB: 107374182400,
+        totalGB: 53687091200, // 50GB
         expiryTime: expiryTime,
         enable: true,
         tgId: '',
@@ -444,6 +456,31 @@ export class XuiApiClient {
       logger.error('Error toggling client:', error);
       return false;
     }
+  }
+
+  /**
+   * Get a specific client by UUID from an inbound
+   * @param inboundId - The inbound ID
+   * @param clientUuid - The client UUID to find
+   */
+  async getClientByUuid(inboundId: number, clientUuid: string): Promise<XuiClient | null> {
+    const clients = await this.getInboundClients(inboundId);
+    const client = clients.find(c => String(c.id) === clientUuid);
+    
+    if (client) {
+      return {
+        id: inboundId,
+        enable: client.enable,
+        email: client.email,
+        uuid: String(client.id),
+        limitIp: client.limitIp,
+        totalGB: client.totalGB,
+        expiryTime: client.expiryTime,
+        subId: client.subId,
+      };
+    }
+    
+    return null;
   }
 
   /**

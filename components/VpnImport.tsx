@@ -41,7 +41,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
   const [dragActive, setDragActive] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [dayPeriod, setDayPeriod] = useState(30);
-  const [trafficLimitGB, setTrafficLimitGB] = useState(100);
+  const [trafficLimitGB, setTrafficLimitGB] = useState(50);
 
   // Inventory tab states
   const [vpnUrls, setVpnUrls] = useState<VpnUrlWithUser[]>([]);
@@ -334,7 +334,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
               <p><strong>Configurable Settings:</strong></p>
               <ul className="list-disc list-inside space-y-1 text-xs">
                 <li>Validity period: 1-3650 days (default: 30)</li>
-                <li>Traffic limit: 0.1-10000 GB (default: 100)</li>
+                <li>Traffic limit: 0.1-10000 GB (default: 50)</li>
                 <li>Applied to all imported URLs</li>
               </ul>
             </div>
@@ -368,7 +368,7 @@ export const VpnImport: React.FC<VpnImportProps> = ({ onSuccess }) => {
                   max="10000"
                   step="0.1"
                   value={trafficLimitGB}
-                  onChange={(e) => setTrafficLimitGB(Math.max(0.1, parseFloat(e.target.value) || 100))}
+                  onChange={(e) => setTrafficLimitGB(Math.max(0.1, parseFloat(e.target.value) || 50))}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-chinaRed"
                 />
                 <p className="text-xs text-slate-500">Applied to all imported URLs</p>
