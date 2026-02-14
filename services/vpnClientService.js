@@ -825,6 +825,8 @@ async function createVpnClient(request) {
     let expiresAt = null;
     if (xuiResult.expiryTime && xuiResult.expiryTime > 0) {
       expiresAt = new Date(xuiResult.expiryTime).toISOString();
+    } else if (xuiResult.expiryTime && xuiResult.expiryTime < 0) {
+      expiresAt = null;
     } else if (expiryDays > 0) {
       const expiryDate = /* @__PURE__ */ new Date();
       expiryDate.setDate(expiryDate.getDate() + expiryDays + 1);

@@ -190,11 +190,12 @@ var XuiApiClient = class {
   async createClient(inboundId, email, expiryDays = 30, limitIp = 1) {
     const uuid = crypto.randomUUID();
     const subId = crypto.randomUUID().replace(/-/g, "").substring(0, 16);
-    const now = /* @__PURE__ */ new Date();
-    const expiryDate = new Date(now);
-    expiryDate.setDate(expiryDate.getDate() + expiryDays + 1);
-    expiryDate.setHours(0, 0, 0, 0);
-    const expiryTime = expiryDays > 0 ? expiryDate.getTime() : 0;
+    // Use negative expiryTime to trigger expiration countdown AFTER first use
+    // -86400000 = 1 day after first use, -2592000000 = 30 days after first use
+    // This allows users to buy first, then start using abroad - expiry starts on first connection
+    const expiryTime = expiryDays > 0 ? -(expiryDays * 24 * 60 * 60 * 1000) : 0;
+    console.log("[X-UI] DEBUG: expiryDays =", expiryDays);
+    console.log("[X-UI] DEBUG: expiryTime (should be negative) =", expiryTime);
     const settingsData = {
       clients: [{
         id: uuid,
@@ -217,7 +218,7 @@ var XuiApiClient = class {
       id: inboundId,
       settings: JSON.stringify(settingsData, null, 2)
     });
-    console.log("[X-UI] Calculated expiry:", new Date(expiryTime).toISOString());
+    console.log("[X-UI] Expiry (negative = starts on first use):", expiryTime, "ms");
     const response = await this.request(
       "/panel/api/inbounds/addClient",
       {

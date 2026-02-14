@@ -134,13 +134,18 @@ export async function createVpnClient(request: CreateVpnClientRequest): Promise<
     console.log('[VPN] X-UI client created:', xuiResult);
 
     // Use X-UI expiry time if available, otherwise calculate ourselves
+    // Note: Negative expiryTime means countdown starts on first use (3x-ui feature)
     let expiresAt: string | null = null;
     if (xuiResult.expiryTime && xuiResult.expiryTime > 0) {
+      // Positive expiryTime = fixed expiration date
       expiresAt = new Date(xuiResult.expiryTime).toISOString();
+    } else if (xuiResult.expiryTime && xuiResult.expiryTime < 0) {
+      // Negative expiryTime = countdown starts on first use
+      // We don't know the actual expiry yet - it's tracked by 3x-ui
+      // Store null initially, it will be updated when user first connects
+      expiresAt = null;
     } else if (expiryDays > 0) {
-      // Fallback: calculate expiry time ourselves
-      // Today (purchase day) is FREE. Next X days are paid. Expires at 00:00 after paid days.
-      // e.g., 3 days paid on Feb 6 -> expires Feb 10 00:00 (6 free, 7/8/9 are 3 paid days)
+      // Fallback: calculate expiry time ourselves (shouldn't happen with current logic)
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + expiryDays + 1);
       expiryDate.setHours(0, 0, 0, 0);
