@@ -73,8 +73,8 @@ export const UserVpnCenter: React.FC = () => {
     });
   };
 
-  const getDaysRemaining = (expiresAt: string): number => {
-    if (!expiresAt) return 0;
+  const getDaysRemaining = (expiresAt: string | null | undefined): number => {
+    if (!expiresAt || expiresAt === '') return -1; // -1 means not activated yet
     const expiryDate = new Date(expiresAt);
     const now = new Date();
     const diffTime = expiryDate.getTime() - now.getTime();
@@ -127,8 +127,9 @@ export const UserVpnCenter: React.FC = () => {
         <div className="grid gap-4">
           {vpnClients.map((vpn) => {
             const daysRemaining = getDaysRemaining(vpn.expires_at);
-            const isExpiring = daysRemaining <= 3;
-            const isExpired = daysRemaining <= 0;
+            const isNotActivated = daysRemaining === -1;
+            const isExpiring = daysRemaining > 0 && daysRemaining <= 3;
+            const isExpired = daysRemaining === 0;
 
             return (
               <div
@@ -136,6 +137,8 @@ export const UserVpnCenter: React.FC = () => {
                 className={`border rounded-lg p-6 transition-all ${
                   isExpired
                     ? 'bg-red-50 border-red-200'
+                    : isNotActivated
+                    ? 'bg-blue-50 border-blue-200'
                     : isExpiring
                     ? 'bg-yellow-50 border-yellow-200'
                     : 'bg-white border-slate-200 hover:shadow-lg'
@@ -148,19 +151,26 @@ export const UserVpnCenter: React.FC = () => {
                       <h3 className="font-semibold text-slate-900">
                         {vpn.product_id.replace('vpn-', '').replace('days', ' Day VPN')}
                       </h3>
+                      {isNotActivated && (
+                        <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs font-semibold rounded">
+                          Not Activated
+                        </span>
+                      )}
                       {isExpired && (
                         <span className="px-2 py-1 bg-red-200 text-red-800 text-xs font-semibold rounded">
                           Expired
                         </span>
                       )}
-                      {isExpiring && !isExpired && (
+                      {isExpiring && !isExpired && !isNotActivated && (
                         <span className="px-2 py-1 bg-yellow-200 text-yellow-800 text-xs font-semibold rounded">
                           Expiring Soon
                         </span>
                       )}
                     </div>
                     <p className="text-sm text-slate-600 mt-1">
-                      Created {formatDate(vpn.created_at)}
+                      {isNotActivated 
+                        ? 'Connect to VPN to start your subscription' 
+                        : `Created ${formatDate(vpn.created_at)}`}
                     </p>
                   </div>
                   <button
@@ -178,7 +188,9 @@ export const UserVpnCenter: React.FC = () => {
                   <div className="bg-slate-100 rounded p-3">
                     <p className="text-xs text-slate-600">Validity</p>
                     <p className="text-sm font-semibold text-slate-900">
-                      {daysRemaining} days
+                      {daysRemaining === -1 
+                        ? 'Not activated' 
+                        : `${daysRemaining} days`}
                     </p>
                   </div>
                   <div className="bg-slate-100 rounded p-3">
@@ -190,7 +202,7 @@ export const UserVpnCenter: React.FC = () => {
                   <div className="bg-slate-100 rounded p-3">
                     <p className="text-xs text-slate-600">Status</p>
                     <p className="text-sm font-semibold text-slate-900">
-                      {vpn.status}
+                      {isNotActivated ? 'Pending' : vpn.status}
                     </p>
                   </div>
                 </div>

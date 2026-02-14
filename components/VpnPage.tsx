@@ -119,6 +119,14 @@ export const VpnPage: React.FC<VpnPageProps> = ({ onBack }) => {
              <h3 className="text-2xl font-bold text-slate-900 mb-8 text-center">Common Questions</h3>
              <div className="space-y-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <h4 className="font-bold text-slate-900 mb-2">When does my VPN usage start?</h4>
+                    <p className="text-slate-600">Your usage period starts from the moment you first connect to the VPN - not from the purchase date. Buy now, use later. Perfect if you're planning a future trip to China.</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+                    <h4 className="font-bold text-slate-900 mb-2">How much data do I get?</h4>
+                    <p className="text-slate-600">Each plan includes 50GB of data per subscription period. That's enough for browsing, video calls, streaming, and more.</p>
+                </div>
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
                     <h4 className="font-bold text-slate-900 mb-2">Do I need to install an app?</h4>
                     <p className="text-slate-600">Yes, we provide a custom client for iOS, Android, Windows, and Mac. Download links will be emailed immediately after purchase.</p>
                 </div>
