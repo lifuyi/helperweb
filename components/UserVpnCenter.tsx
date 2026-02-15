@@ -12,6 +12,7 @@ import {
   Loader,
 } from 'lucide-react';
 import { getUserVpnClientsFromTable } from '../services/vpnClientService';
+import { parseVlessUrl } from '../utils/vlessParser';
 
 interface VpnClient {
   id: string;
@@ -184,19 +185,13 @@ export const UserVpnCenter: React.FC = () => {
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-3 gap-3 mb-4">
+                <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="bg-slate-100 rounded p-3">
                     <p className="text-xs text-slate-600">Validity</p>
                     <p className="text-sm font-semibold text-slate-900">
                       {daysRemaining === -1 
                         ? 'Not activated' 
-                        : `${daysRemaining} days`}
-                    </p>
-                  </div>
-                  <div className="bg-slate-100 rounded p-3">
-                    <p className="text-xs text-slate-600">Product</p>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {vpn.product_id}
+                        : `${daysRemaining} days remaining`}
                     </p>
                   </div>
                   <div className="bg-slate-100 rounded p-3">
@@ -207,11 +202,23 @@ export const UserVpnCenter: React.FC = () => {
                   </div>
                 </div>
 
-                {/* VPN URL Display */}
+                {/* Expires Info */}
+                <div className="mb-4">
+                  <div className="bg-slate-100 rounded p-3">
+                    <p className="text-xs text-slate-600 mb-1">Expires</p>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {isNotActivated 
+                        ? 'Not activated yet' 
+                        : formatDate(vpn.expires_at)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* VPN URL Display (hidden by default) */}
                 {showUrls && (
                   <div className="mb-4 space-y-3">
                     <div className="bg-slate-100 rounded p-3">
-                      <p className="text-xs text-slate-600 mb-2">VPN Address</p>
+                      <p className="text-xs text-slate-600 mb-2">VPN Address (Full URL)</p>
                       <div className="flex items-center space-x-2">
                         <code className="flex-1 text-xs font-mono text-slate-900 break-all bg-white p-2 rounded border border-slate-300">
                           {vpn.vless_url}
