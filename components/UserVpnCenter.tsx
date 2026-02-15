@@ -3,16 +3,10 @@ import { logger } from '../utils/logger';
 import {
   Copy,
   Check,
-  Eye,
-  EyeOff,
-  Download,
-  Calendar,
-  Zap,
   AlertCircle,
   Loader,
 } from 'lucide-react';
 import { getUserVpnClientsFromTable } from '../services/vpnClientService';
-import { parseVlessUrl } from '../utils/vlessParser';
 
 interface VpnClient {
   id: string;
@@ -28,9 +22,7 @@ interface VpnClient {
 export const UserVpnCenter: React.FC = () => {
   const [vpnClients, setVpnClients] = useState<VpnClient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showUrls, setShowUrls] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     loadUserVpnClients();
@@ -86,29 +78,11 @@ export const UserVpnCenter: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">My VPN Addresses</h2>
-          <p className="text-slate-600 text-sm mt-1">
-            Your assigned VPN configurations
-          </p>
-        </div>
-        <button
-          onClick={() => setShowUrls(!showUrls)}
-          className="flex items-center space-x-2 px-4 py-2 bg-chinaRed text-white rounded-lg hover:bg-red-700 transition-colors"
-        >
-          {showUrls ? (
-            <>
-              <EyeOff className="w-4 h-4" />
-              <span>Hide URLs</span>
-            </>
-          ) : (
-            <>
-              <Eye className="w-4 h-4" />
-              <span>Show URLs</span>
-            </>
-          )}
-        </button>
+      <div>
+        <h2 className="text-2xl font-bold text-slate-900">My VPN Addresses</h2>
+        <p className="text-slate-600 text-sm mt-1">
+          Your assigned VPN configurations
+        </p>
       </div>
 
       {/* Loading State */}
@@ -146,42 +120,32 @@ export const UserVpnCenter: React.FC = () => {
                 }`}
               >
                 {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold text-slate-900">
-                        {vpn.product_id.replace('vpn-', '').replace('days', ' Day VPN')}
-                      </h3>
-                      {isNotActivated && (
-                        <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs font-semibold rounded">
-                          Not Activated
-                        </span>
-                      )}
-                      {isExpired && (
-                        <span className="px-2 py-1 bg-red-200 text-red-800 text-xs font-semibold rounded">
-                          Expired
-                        </span>
-                      )}
-                      {isExpiring && !isExpired && !isNotActivated && (
-                        <span className="px-2 py-1 bg-yellow-200 text-yellow-800 text-xs font-semibold rounded">
-                          Expiring Soon
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-slate-600 mt-1">
-                      {isNotActivated 
-                        ? 'Connect to VPN to start your subscription' 
-                        : `Created ${formatDate(vpn.created_at)}`}
-                    </p>
+                <div className="mb-4">
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-semibold text-slate-900">
+                      {vpn.product_id.replace('vpn-', '').replace('days', ' Day VPN')}
+                    </h3>
+                    {isNotActivated && (
+                      <span className="px-2 py-1 bg-blue-200 text-blue-800 text-xs font-semibold rounded">
+                        Not Activated
+                      </span>
+                    )}
+                    {isExpired && (
+                      <span className="px-2 py-1 bg-red-200 text-red-800 text-xs font-semibold rounded">
+                        Expired
+                      </span>
+                    )}
+                    {isExpiring && !isExpired && !isNotActivated && (
+                      <span className="px-2 py-1 bg-yellow-200 text-yellow-800 text-xs font-semibold rounded">
+                        Expiring Soon
+                      </span>
+                    )}
                   </div>
-                  <button
-                    onClick={() =>
-                      setExpandedId(expandedId === vpn.id ? null : vpn.id)
-                    }
-                    className="text-slate-600 hover:text-slate-900"
-                  >
-                    {expandedId === vpn.id ? '−' : '+'}
-                  </button>
+                  <p className="text-sm text-slate-600 mt-1">
+                    {isNotActivated 
+                      ? 'Connect to VPN to start your subscription' 
+                      : `Created ${formatDate(vpn.created_at)}`}
+                  </p>
                 </div>
 
                 {/* Quick Stats */}
@@ -214,29 +178,27 @@ export const UserVpnCenter: React.FC = () => {
                   </div>
                 </div>
 
-                {/* VPN URL Display (hidden by default) */}
-                {showUrls && (
-                  <div className="mb-4 space-y-3">
-                    <div className="bg-slate-100 rounded p-3">
-                      <p className="text-xs text-slate-600 mb-2">VPN Address (Full URL)</p>
-                      <div className="flex items-center space-x-2">
-                        <code className="flex-1 text-xs font-mono text-slate-900 break-all bg-white p-2 rounded border border-slate-300">
-                          {vpn.vless_url}
-                        </code>
-                        <button
-                          onClick={() => copyToClipboard(vpn.vless_url, vpn.id)}
-                          className="p-2 text-slate-600 hover:bg-white rounded transition-colors"
-                        >
-                          {copiedId === vpn.id ? (
-                            <Check className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                        </button>
-                      </div>
+                {/* VPN URL Display */}
+                <div className="mb-4">
+                  <div className="bg-slate-100 rounded p-3">
+                    <p className="text-xs text-slate-600 mb-2">VPN Address</p>
+                    <div className="flex items-center space-x-2">
+                      <code className="flex-1 text-xs font-mono text-slate-900 break-all bg-white p-2 rounded border border-slate-300">
+                        {vpn.vless_url}
+                      </code>
+                      <button
+                        onClick={() => copyToClipboard(vpn.vless_url, vpn.id)}
+                        className="p-2 text-slate-600 hover:bg-white rounded transition-colors"
+                      >
+                        {copiedId === vpn.id ? (
+                          <Check className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Copy className="w-4 h-4" />
+                        )}
+                      </button>
                     </div>
                   </div>
-                )}
+                </div>
 
                 {/* Actions */}
                 <div className="flex gap-2">
