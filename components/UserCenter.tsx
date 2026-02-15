@@ -371,9 +371,6 @@ const VlessUrlItem: React.FC<VlessUrlItemProps> = ({ vpnUrl }) => {
         <p className="text-xs text-slate-500">
           Created: {formatDate(vpnUrl.created_at)} • Expires: {formatDate(vpnUrl.expires_at)}
         </p>
-        <p className="text-xs text-slate-500 mt-1">
-          Server: {vpnUrl.vless_host}:{vpnUrl.vless_port} • Security: {vpnUrl.security_type}
-        </p>
       </div>
 
       {!isExpired && (
