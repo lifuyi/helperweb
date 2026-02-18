@@ -544,12 +544,13 @@ function generateVpnSetupHtml(data) {
         <li>Tap to connect</li>
       </ol>
 
-      <h4 style="color: #333;">Nekoray (Windows)</h4>
+      <h4 style="color: #333;">Karing (Windows)</h4>
       <ol style="padding-left: 20px;">
-        <li>Open Nekoray</li>
-        <li>Right-click the tray icon \u2192 "Import Config" \u2192 "Import from String"</li>
+        <li>Download Karing from <a href="https://karing.app/en/" style="color: #667eea;">karing.app</a></li>
+        <li>Open Karing</li>
+        <li>Click + → "Import from URL"</li>
         <li>Paste your VLESS URL</li>
-        <li>Click the connect button</li>
+        <li>Click to connect</li>
       </ol>
     </div>
 
@@ -613,11 +614,12 @@ V2Box (iOS):
 4. Paste your VLESS URL
 5. Tap to connect
 
-Nekoray (Windows):
-1. Open Nekoray
-2. Right-click tray icon \u2192 "Import Config" \u2192 "Import from String"
-3. Paste your VLESS URL
-4. Click connect
+Karing (Windows):
+1. Download Karing from https://karing.app/en/
+2. Open Karing
+3. Click + → "Import from URL"
+4. Paste your VLESS URL
+5. Click to connect
 
 QUICK TIPS
 ==========

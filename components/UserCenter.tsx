@@ -406,7 +406,7 @@ const VlessUrlItem: React.FC<VlessUrlItemProps> = ({ vpnUrl }) => {
             <ul className="text-xs text-blue-800 space-y-1">
               <li>• <strong>Android:</strong> V2RayNG → + → Import from clipboard</li>
               <li>• <strong>iOS:</strong> V2Box → + → Import from URL</li>
-              <li>• <strong>Windows:</strong> Nekoray → Import Config → Import from String</li>
+              <li>• <strong>Windows:</strong> Download <a href="https://karing.app/en/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Karing</a> → Import from URL</li>
             </ul>
           </div>
         </div>
