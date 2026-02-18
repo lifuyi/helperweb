@@ -527,24 +527,7 @@ function generateVpnSetupHtml(data) {
     <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
       <h3 style="margin-top: 0; color: #667eea;">\u{1F4F1} Setup Instructions</h3>
 
-      <h4 style="color: #333;">V2RayNG (Android)</h4>
-      <ol style="padding-left: 20px;">
-        <li>Open V2RayNG app</li>
-        <li>Tap the + button \u2192 "Import from clipboard"</li>
-        <li>Paste your VLESS URL</li>
-        <li>Tap the floating action button to connect</li>
-      </ol>
-
-      <h4 style="color: #333;">V2Box (iOS)</h4>
-      <ol style="padding-left: 20px;">
-        <li>Open V2Box app</li>
-        <li>Tap the + button</li>
-        <li>Choose "Import from URL"</li>
-        <li>Paste your VLESS URL</li>
-        <li>Tap to connect</li>
-      </ol>
-
-      <h4 style="color: #333;">Karing (Windows)</h4>
+      <h4 style="color: #333;">Karing (Android/iOS/Windows)</h4>
       <ol style="padding-left: 20px;">
         <li>Download Karing from <a href="https://karing.app/en/" style="color: #667eea;">karing.app</a></li>
         <li>Open Karing</li>
@@ -601,20 +584,7 @@ ${vlessUrl}
 SETUP INSTRUCTIONS
 ==================
 
-V2RayNG (Android):
-1. Open V2RayNG app
-2. Tap + button \u2192 "Import from clipboard"
-3. Paste your VLESS URL
-4. Tap to connect
-
-V2Box (iOS):
-1. Open V2Box app
-2. Tap + button
-3. Choose "Import from URL"
-4. Paste your VLESS URL
-5. Tap to connect
-
-Karing (Windows):
+Karing (Android/iOS/Windows):
 1. Download Karing from https://karing.app/en/
 2. Open Karing
 3. Click + → "Import from URL"
