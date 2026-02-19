@@ -402,12 +402,13 @@ const VlessUrlItem: React.FC<VlessUrlItemProps> = ({ vpnUrl }) => {
           </div>
 
           <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-            <p className="text-xs font-semibold text-blue-900 mb-2">📱 Setup Instructions:</p>
-            <ul className="text-xs text-blue-800 space-y-1">
-              <li>• <strong>Android:</strong> Download <a href="https://karing.app/en/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Karing</a> → Import from URL</li>
-              <li>• <strong>iOS:</strong> Download <a href="https://karing.app/en/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Karing</a> → Import from URL</li>
-              <li>• <strong>Windows:</strong> Download <a href="https://karing.app/en/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Karing</a> → Import from URL</li>
-            </ul>
+            <p className="text-xs font-semibold text-blue-900 mb-2">📱 Setup Instructions (Android/iOS/Windows):</p>
+            <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+              <li>Download <a href="https://karing.app/en/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Karing</a></li>
+              <li>Open Karing and click <strong>+</strong></li>
+              <li>Select <strong>"Import from URL"</strong></li>
+              <li>Paste the VPN URL above and connect</li>
+            </ol>
           </div>
         </div>
       )}
